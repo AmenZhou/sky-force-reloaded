@@ -16,10 +16,20 @@ class StarManager {
     });
   }
 
-  update(dt, drift) {
+  update(dt, drift, player, magnetRadius = 0, magnetStrength = 0) {
     for (const s of this.list) {
       if (!s.active) continue;
       s.wobble += dt * 5;
+      if (player && magnetRadius > 0) {
+        const dx = player.x - s.x;
+        const dy = player.y - s.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < magnetRadius && dist > 1) {
+          const pull = magnetStrength / dist;
+          s.vx += dx * pull * dt * 0.02;
+          s.vy += dy * pull * dt * 0.02;
+        }
+      }
       s.x += s.vx * dt + Math.sin(s.wobble) * 15 * dt;
       s.y += (s.vy + drift) * dt;
     }

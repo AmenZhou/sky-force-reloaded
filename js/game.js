@@ -5,7 +5,14 @@ class Game {
     this.callbacks = callbacks;
     this.mode = options.mode || 'arcade';
     this.stageData = options.stageData || null;
+    this.difficulty = options.difficulty || 'normal';
+    this.hangarStats = options.hangarStats || HangarSystem.statsFromSave(SkyForceSave.load());
     this.stageDirector = null;
+    this.hostages = new HostageManager();
+    this.runHits = 0;
+    this.runCharges = {};
+    this.friendCheckpoint = options.friendCheckpoint ?? SkyForceSave.load().friendCheckpointScore ?? 42000;
+    this.checkpointPassed = false;
     this.running = false;
     this.rafId = 0;
     this.lastTime = 0;
@@ -22,7 +29,7 @@ class Game {
     this.timeScale = 1;
     this.idleTimer = 0;
     this.dilationDelay = 0.1;
-    this.dilationScale = 0.25;
+    this.dilationScale = 0.2;
     this.bossActive = false;
     this.bossHpPct = 100;
     this.boss = null;
@@ -33,6 +40,12 @@ class Game {
 
     this.background = new Background(canvas.width, canvas.height);
     this.player = new Player(canvas.width / 2, canvas.height - 80);
+    this.player.applyHangar(this.hangarStats);
+    this.runCharges = {
+      laser: this.hangarStats.laserCharges,
+      shield: this.hangarStats.shieldCharges,
+      bomb: this.hangarStats.bombCharges,
+    };
     this.bullets = new BulletPool();
     this.enemies = new EnemyManager(canvas.width, canvas.height);
     this.powerups = new PowerUpManager();
@@ -55,6 +68,9 @@ class Game {
       }
       if (down) this.keys.add(e.key);
       else this.keys.delete(e.key);
+      if (down && e.key === 'z') this.useAbility('laser');
+      if (down && e.key === 'x') this.useAbility('shield');
+      if (down && e.key === 'c') this.useAbility('bomb');
     };
     window.addEventListener('keydown', onKey(true));
     window.addEventListener('keyup', onKey(false));
@@ -127,8 +143,11 @@ class Game {
           this.callbacks.onWaveStart?.(section);
         },
         onSpawnEnemy: (type, x, y, wave, opts) => {
-          this.enemies.spawn(type, x, y, wave, opts);
+          const hpMult = (window.HANGAR_CONFIG?.difficulty?.enemyHp?.[this.difficulty] || 1)
+            * (opts?.hpMult || 1);
+          this.enemies.spawn(type, x, y, wave, { ...opts, difficultyHpMult: hpMult });
         },
+        onSpawnHostage: (id, x, y) => this.hostages.spawn(id, x, y),
         onSpawnBoss: (ev) => this._spawnStageBoss(ev),
       });
       this.stageDirector.getWave = () => this.wave;
@@ -176,10 +195,11 @@ class Game {
       this.player.moveByAxes(moveX, moveY, dt, this.canvas.width, this.canvas.height);
     }
 
-    this.player.fire(this.bullets, dt);
+    this.player.fire(this.bullets, dt, this.enemies.list);
     this.player.tick(rawDt);
+    this._applyLaserBeam(dt);
 
-    this.bullets.update(dt, this.canvas.width, this.canvas.height);
+    this.bullets.update(dt, this.canvas.width, this.canvas.height, this.enemies.list);
 
     if (this.mode === 'stage' && this.stageDirector?.running) {
       this.stageDirector.update(dt);
@@ -187,9 +207,26 @@ class Game {
       this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
     }
 
-    this.enemies.tryFire(this.bullets, this.player, dt, this.wave);
+    const bulletMult = window.HANGAR_CONFIG?.difficulty?.bulletSpeed?.[this.difficulty] || 1;
+    this.enemies.tryFire(this.bullets, this.player, dt, this.wave, bulletMult);
     this.powerups.update(dt, this.scrollSpeed * 0.5);
-    this.stars.update(dt, this.scrollSpeed * 0.5);
+    this.stars.update(
+      dt,
+      this.scrollSpeed * 0.5,
+      this.player,
+      this.hangarStats.magnetRadius,
+      this.hangarStats.magnetStrength,
+    );
+    this.hostages.update(dt, this.player, (h) => {
+      this.runStars += 5;
+      this._addScore(200);
+      this.callbacks.onHostageRescued?.(h.id);
+    });
+
+    if (this.mode === 'stage' && !this.checkpointPassed && this.score >= this.friendCheckpoint) {
+      this.checkpointPassed = true;
+      this.callbacks.onCheckpointPassed?.(this.friendCheckpoint);
+    }
 
     this._resolveCollisions();
 
@@ -233,11 +270,14 @@ class Game {
       bossHpPct: this.bossHpPct,
       bossName: this.boss?.name || null,
       waveBanner: this.waveBannerTimer > 0 ? this.wave : 0,
+      runCharges: { ...this.runCharges },
+      difficulty: this.difficulty,
       hitFlash: this.hitFlash,
     });
   }
 
   _notifyHit(damage, lostLife) {
+    this.runHits += 1;
     this.hitFlash = Math.max(this.hitFlash, 0.35);
     this.screenShake = 0.2;
     this.callbacks.onPlayerHit?.({
@@ -304,16 +344,94 @@ class Game {
       this.stageDirector?.stop();
       const bonus = this.stageData?.clearBonusStars || 50;
       this.runStars += bonus;
-      const medals = this.stageDirector?._medalSnapshot?.() || { completion: true };
+      const medals = this._computeMedals();
       this.running = false;
       this.callbacks.onStageComplete?.({
         score: this.score,
         runStars: this.runStars,
         stageId: this.stageData?.id,
         stageName: this.stageData?.name,
+        difficulty: this.difficulty,
         medals,
         clearBonusStars: bonus,
+        rescued: this.hostages.rescuedCount,
+        killPct: this.stageDirector?.killStats
+          ? this.stageDirector.killStats.killed / Math.max(1, this.stageDirector.killStats.spawned)
+          : 0,
       });
+    }
+  }
+
+  _computeMedals() {
+    const spawned = this.stageDirector?.killStats?.spawned || 0;
+    const killed = this.stageDirector?.killStats?.killed || 0;
+    const killPct = spawned ? killed / spawned : 0;
+    const medals = [];
+    if (killPct >= 0.7) medals.push('destroy70');
+    if (spawned > 0 && killed >= spawned) medals.push('destroy100');
+    if (this.hostages.totalSpawned > 0 && this.hostages.allRescued) medals.push('rescueAll');
+    if (this.runHits === 0) medals.push('noHit');
+    return medals;
+  }
+
+  useAbility(kind) {
+    if (!this.running) return false;
+    if (kind === 'laser' && this.runCharges.laser > 0) {
+      this.runCharges.laser -= 1;
+      this.player.activateLaser();
+      this.callbacks.onAbilityUsed?.('laser', this.runCharges.laser);
+      return true;
+    }
+    if (kind === 'shield' && this.runCharges.shield > 0) {
+      this.runCharges.shield -= 1;
+      this.player.activateEnergyShield();
+      this.callbacks.onAbilityUsed?.('shield', this.runCharges.shield);
+      return true;
+    }
+    if (kind === 'bomb' && this.runCharges.bomb > 0) {
+      this.runCharges.bomb -= 1;
+      this._triggerMegaBomb();
+      this.callbacks.onAbilityUsed?.('bomb', this.runCharges.bomb);
+      return true;
+    }
+    return false;
+  }
+
+  _triggerMegaBomb() {
+    this.bullets.enemyPool.releaseAll();
+    this.screenShake = 0.5;
+    for (const enemy of this.enemies.list) {
+      if (!enemy.alive) continue;
+      if (enemy.takeDamage(Math.round(enemy.maxHp * 0.55))) {
+        this._addScore(enemy.points);
+        this.stageDirector?.onEnemyKilled();
+        this.stars.spawn(enemy.x, enemy.y, 12);
+      }
+    }
+    if (this.boss?.alive) {
+      this.boss.takeDamage(Math.round(this.boss.maxHp * 0.2));
+      this.bossHpPct = this.boss.hpPct;
+    }
+  }
+
+  _applyLaserBeam(dt) {
+    if (this.player.laserActive <= 0) return;
+    const px = this.player.x;
+    const dmg = 80 * dt;
+    for (const enemy of this.enemies.list) {
+      if (!enemy.alive) continue;
+      if (Math.abs(enemy.x - px) < 20 && enemy.y < this.player.y) {
+        if (enemy.takeDamage(dmg)) {
+          this._addScore(enemy.points);
+          this.stageDirector?.onEnemyKilled();
+          this.stars.spawn(enemy.x, enemy.y, 10);
+          this.screenShake = 0.15;
+        }
+      }
+    }
+    if (this.boss?.alive && Math.abs(this.boss.x - px) < 40) {
+      this.boss.takeDamage(dmg * 1.5);
+      this.bossHpPct = this.boss.hpPct;
     }
   }
 
@@ -339,19 +457,35 @@ class Game {
       }
     }
 
-    for (const bullet of [...this.bullets.playerBullets]) {
+    for (const bullet of [...this.bullets.playerBullets, ...this.bullets.missiles]) {
       for (const enemy of this.enemies.list) {
         if (!enemy.alive || !bullet.active) continue;
         if (this._hit(bullet, enemy)) {
-          this.bullets.playerPool.release(bullet);
+          if (bullet.homing) this.bullets.missilePool.release(bullet);
+          else this.bullets.playerPool.release(bullet);
           if (enemy.takeDamage(bullet.damage)) {
             this._addScore(enemy.points);
             if (this.mode === 'arcade') this.enemyKillsThisWave += 1;
             this.stageDirector?.onEnemyKilled();
             this.stars.spawn(enemy.x, enemy.y, 10 + Math.floor(enemy.points / 50));
+            this.screenShake = 0.12;
             if (Math.random() < enemy.dropChance) {
               this.powerups.spawn(enemy.x, enemy.y, enemy.dropType);
             }
+          }
+          break;
+        }
+      }
+    }
+
+    if (this.boss?.alive) {
+      for (const bullet of [...this.bullets.missiles]) {
+        if (!bullet.active) continue;
+        if (this._hit(bullet, this.boss)) {
+          this.bullets.missilePool.release(bullet);
+          if (this.boss.takeDamage(bullet.damage)) {
+            this._addScore(this.boss.points);
+            this._onBossDefeated();
           }
           break;
         }
@@ -440,13 +574,32 @@ class Game {
     this.stars.draw(ctx);
     this.powerups.draw(ctx);
     this.enemies.draw(ctx);
+    this.hostages.draw(ctx);
     if (this.boss?.alive) this.boss.draw(ctx);
     this.bullets.draw(ctx);
     this.player.draw(ctx);
+    if (this.mode === 'stage') this._drawCheckpointMarker(ctx);
     if (this.hitFlash > 0) {
       ctx.fillStyle = `rgba(244, 63, 94, ${this.hitFlash * 0.35})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+    ctx.restore();
+  }
+
+  _drawCheckpointMarker(ctx) {
+    const { canvas } = this;
+    const y = canvas.height * 0.38;
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    ctx.strokeStyle = this.checkpointPassed ? 'rgba(74, 222, 128, 0.6)' : 'rgba(148, 163, 184, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(canvas.width - 52, y - 18, 44, 36);
+    ctx.strokeRect(canvas.width - 52, y - 18, 44, 36);
+    ctx.fillStyle = this.checkpointPassed ? '#4ade80' : '#94a3b8';
+    ctx.font = 'bold 7px Rajdhani,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FRIEND', canvas.width - 30, y - 4);
+    ctx.fillText(String(Math.round(this.friendCheckpoint / 1000)) + 'k', canvas.width - 30, y + 8);
     ctx.restore();
   }
 }

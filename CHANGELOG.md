@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-06-07
+
+- Hangar: 8 upgrade categories (HP, cannon, wings, missiles, magnet, laser/shield/bomb stocks) with star costs
+- Stage map: difficulty tiers Normal→Hard→Insane→Nightmare, 4 medals per stage, medal-gated unlocks
+- Gameplay: magnet vacuum, homing missiles, wing cannons, hostages + rescue meter, enemy damage visuals
+- Active abilities: laser beam (Z), energy shield (X), mega bomb (C); Focus Time at 20% on finger lift
+- Friend score checkpoint marker on stage runs; stars bank with difficulty + medal bonuses
+
 ## 0.4.0 — 2026-06-07
 
 - Stage 1 campaign: `StageDirector` + `data/stages/stage-01.json`, scripted formations → boss

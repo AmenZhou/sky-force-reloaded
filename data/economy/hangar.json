@@ -57,6 +57,14 @@
       "growth": 1.57,
       "maxLevel": 6,
       "effect": "preStageBombCharges = level"
+    },
+    "laser": {
+      "label": "Laser (stock)",
+      "unlock": 6000,
+      "base": 180,
+      "growth": 1.57,
+      "maxLevel": 6,
+      "effect": "preStageLaserCharges = level"
     }
   },
   "totals": {

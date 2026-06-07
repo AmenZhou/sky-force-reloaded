@@ -86,6 +86,9 @@ class StageDirector {
           this.callbacks.onSpawnBoss?.(ev);
         }
         break;
+      case 'spawnHostage':
+        this.callbacks.onSpawnHostage?.(ev.id, ev.x * this.w, ev.y * this.h);
+        break;
       case 'stageComplete':
         this.running = false;
         this.callbacks.onStageComplete?.(this._medalSnapshot());

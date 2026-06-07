@@ -23,7 +23,9 @@ window.SKY_FORCE_STAGES['stage-01'] = {
       { type: 'fighter', x: 0.25, y: -0.05 },
       { type: 'fighter', x: 0.75, y: -0.05 },
     ] },
+    { atSec: 18, action: 'spawnHostage', id: 'h1', x: 0.32, y: 0.62 },
     { atSec: 22, action: 'spawn', enemy: 'scout', x: 0.5, y: -0.06, elite: true },
+    { atSec: 38, action: 'spawnHostage', id: 'h2', x: 0.68, y: 0.58 },
     { atSec: 28, action: 'setSection', section: 3 },
     { atSec: 28, action: 'banner', text: 'DIVE SQUADRON', kind: 'wave' },
     { atSec: 30, action: 'spawnGroup', enemies: [

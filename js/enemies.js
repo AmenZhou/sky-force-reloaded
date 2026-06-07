@@ -184,7 +184,10 @@ class EnemyManager {
 
   spawn(type, x, y, wave, opts = {}) {
     const enemy = makeEnemy(type, x, y, wave, opts);
-    if (opts.hpMult && opts.hpMult !== 1) {
+    if (opts.difficultyHpMult) {
+      enemy.hp = Math.round(enemy.hp * opts.difficultyHpMult);
+      enemy.maxHp = enemy.hp;
+    } else if (opts.hpMult && opts.hpMult !== 1) {
       enemy.hp = Math.round(enemy.hp * opts.hpMult);
       enemy.maxHp = enemy.hp;
     }
@@ -246,7 +249,7 @@ class EnemyManager {
     }
   }
 
-  tryFire(bulletPool, player, dt, wave = 1) {
+  tryFire(bulletPool, player, dt, wave = 1, bulletMult = 1) {
     for (const e of this.list) {
       if (!e.alive || e.fireRate <= 0 || e.fireTimer > 0) continue;
       if (e.y < 40 || e.y > this.h * 0.65) continue;
@@ -254,7 +257,7 @@ class EnemyManager {
       const dx = player.x - e.x;
       const dy = player.y - e.y;
       const len = Math.hypot(dx, dy) || 1;
-      const speed = Math.min(205, 172 + wave * 2);
+      const speed = Math.min(215, (172 + wave * 2) * bulletMult);
       const damage = 6 + Math.max(0, wave - 2);
       bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed, damage);
     }
@@ -288,6 +291,19 @@ class EnemyManager {
       }
 
       const hpPct = e.hp / e.maxHp;
+      if (hpPct <= 0.5 && hpPct > 0.25) {
+        ctx.fillStyle = 'rgba(100, 116, 139, 0.45)';
+        ctx.beginPath();
+        ctx.arc(0, 4, e.radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (hpPct <= 0.25) {
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.7)';
+        for (let sp = 0; sp < 3; sp += 1) {
+          ctx.fillRect(-e.radius + sp * 6, -e.radius * 0.2, 2, 4);
+        }
+      }
+
       const barW = e.type === 'tank' ? 40 : e.type === 'fighter' ? 32 : 24;
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.fillRect(-barW / 2, -e.radius - 14, barW, 4);

@@ -11,21 +11,35 @@ class Player {
     this.shield = 100;
     this.weaponLevel = 1;
     this.fireTimer = 0;
+    this.missileTimer = 0;
     this.invuln = 0;
     this.hitFlash = 0;
+    this.hangarStats = null;
+    this.energyShieldActive = 0;
+    this.laserActive = 0;
   }
 
   get shieldPct() {
     return this.shield / this.maxShield;
   }
 
+  applyHangar(stats) {
+    this.hangarStats = stats;
+    this.maxShield = stats.shieldMax;
+    this.shield = stats.shieldMax;
+  }
+
   reset(x, y) {
     this.x = x;
     this.y = y;
-    this.shield = this.maxShield;
+    const max = this.hangarStats?.shieldMax || 100;
+    this.maxShield = max;
+    this.shield = max;
     this.weaponLevel = 1;
     this.invuln = 2;
     this.hitFlash = 0;
+    this.energyShieldActive = 0;
+    this.laserActive = 0;
   }
 
   moveByAxes(ax, ay, dt, w, h) {
@@ -38,15 +52,49 @@ class Player {
     this.y = Math.max(h * 0.45, Math.min(h - this.hitboxRadius, this.y + dy));
   }
 
-  fire(bulletPool, dt) {
+  _cannonPattern() {
+    const hangar = this.hangarStats?.cannonPattern || 1;
+    const pickup = this.weaponLevel;
+    const tier = Math.max(hangar, Math.min(4, pickup));
+    if (tier >= 4) return [-16, -8, 0, 8, 16];
+    if (tier >= 3) return [-12, 0, 12];
+    if (tier >= 2) return [-8, 8];
+    return [0];
+  }
+
+  fire(bulletPool, dt, enemies = []) {
+    if (this.laserActive > 0) return;
+
     this.fireTimer -= dt;
-    const cd = WEAPON_COOLDOWNS[Math.min(this.weaponLevel - 1, WEAPON_COOLDOWNS.length - 1)];
+    const hs = this.hangarStats;
+    const patternTier = Math.min(4, Math.max(this.weaponLevel, hs?.cannonPattern || 1));
+    const cdBase = WEAPON_COOLDOWNS[Math.min(patternTier - 1, WEAPON_COOLDOWNS.length - 1)];
+    const cd = cdBase / (hs?.cannonDpsMult || 1);
     if (this.fireTimer > 0) return;
     this.fireTimer = cd;
 
-    const spread = this.weaponLevel >= 3 ? [-12, 0, 12] : this.weaponLevel >= 2 ? [-8, 8] : [0];
+    const spread = this._cannonPattern();
+    const dmg = 8 + this.weaponLevel + (hs?.cannonDamageBonus || 0);
     for (const offset of spread) {
-      bulletPool.spawnPlayerBullet(this.x + offset, this.y - 18, 520, 8 + this.weaponLevel);
+      bulletPool.spawnPlayerBullet(this.x + offset, this.y - 18, 520, dmg);
+    }
+
+    const wing = hs?.wingLevel || 0;
+    if (wing >= 1) {
+      bulletPool.spawnPlayerBullet(this.x - 22, this.y - 8, 480, dmg - 2);
+      bulletPool.spawnPlayerBullet(this.x + 22, this.y - 8, 480, dmg - 2);
+    }
+    if (wing >= 2) {
+      bulletPool.spawnPlayerBullet(this.x - 32, this.y - 4, 440, dmg - 3);
+      bulletPool.spawnPlayerBullet(this.x + 32, this.y - 4, 440, dmg - 3);
+    }
+
+    if (hs?.missileSalvo > 0) {
+      this.missileTimer -= dt;
+      if (this.missileTimer <= 0) {
+        this.missileTimer = hs.missileInterval || 2.5;
+        bulletPool.fireHomingMissiles(this, enemies, hs.missileSalvo, dmg + 4);
+      }
     }
   }
 
@@ -61,7 +109,7 @@ class Player {
   }
 
   takeDamage(amount) {
-    if (this.invuln > 0) return false;
+    if (this.invuln > 0 || this.energyShieldActive > 0) return false;
     this.shield -= amount;
     this.hitFlash = 0.45;
     this.invuln = 1.5;
@@ -72,6 +120,16 @@ class Player {
     return false;
   }
 
+  activateEnergyShield() {
+    this.energyShieldActive = 3;
+    this.invuln = 3;
+    this.shield = this.maxShield;
+  }
+
+  activateLaser() {
+    this.laserActive = 2.5;
+  }
+
   draw(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -80,6 +138,19 @@ class Player {
       ctx.globalAlpha = 0.35 + Math.sin(Date.now() * 0.04) * 0.25;
     } else if (this.invuln > 0) {
       ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+    }
+
+    if (this.energyShieldActive > 0) {
+      ctx.strokeStyle = `rgba(56, 189, 248, ${0.5 + Math.sin(Date.now() * 0.015) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 14, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (this.laserActive > 0) {
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
+      ctx.fillRect(-3, -320, 6, 300);
     }
 
     if (this.hitFlash > 0) {
@@ -128,5 +199,7 @@ class Player {
   tick(dt) {
     if (this.invuln > 0) this.invuln -= dt;
     if (this.hitFlash > 0) this.hitFlash -= dt;
+    if (this.energyShieldActive > 0) this.energyShieldActive -= dt;
+    if (this.laserActive > 0) this.laserActive -= dt;
   }
 }
