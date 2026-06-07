@@ -1,4 +1,4 @@
-export class Background {
+class Background {
   constructor(w, h) {
     this.w = w;
     this.h = h;

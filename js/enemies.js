@@ -33,7 +33,7 @@ function makeEnemy(typeKey, x, y, wave) {
   };
 }
 
-export class EnemyManager {
+class EnemyManager {
   constructor(w, h) {
     this.w = w;
     this.h = h;
@@ -87,8 +87,8 @@ export class EnemyManager {
       const dx = player.x - e.x;
       const dy = player.y - e.y;
       const len = Math.hypot(dx, dy) || 1;
-      const speed = 180;
-      bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed);
+      const speed = Math.min(220, 180);
+      bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed, 6);
     }
   }
 
@@ -106,7 +106,9 @@ export class EnemyManager {
       ctx.lineWidth = 2;
       ctx.beginPath();
       if (e.type === 'tank') {
-        ctx.roundRect(-e.radius, -e.radius * 0.6, e.radius * 2, e.radius * 1.2, 4);
+        const rw = e.radius;
+        const rh = e.radius * 0.6;
+        ctx.rect(-rw, -rh, rw * 2, rh * 1.2);
       } else {
         ctx.moveTo(0, e.radius);
         ctx.lineTo(e.radius * 0.8, -e.radius);

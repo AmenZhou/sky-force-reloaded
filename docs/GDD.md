@@ -1,0 +1,263 @@
+# Game Design Document — Sky Force Reloaded (Browser)
+
+**Project:** `sky-force-reloaded`  
+**Reference:** Infinite Dreams — *Sky Force Reloaded* (2016)  
+**Target fidelity:** **Inspired-by MVP** with a documented path to closer mimic (stages, hangar meta, medals)  
+**Platform:** Mobile-first portrait + desktop keyboard  
+**Stack:** Vanilla JS, Canvas 2D, ES modules (no build step for MVP)
+
+---
+
+## 1. Vision
+
+A browser vertical shoot-em-up that captures the **feel** of Sky Force Reloaded:
+
+- Ship at the bottom third, **auto-fire forward**, player focuses on **dodge positioning**
+- **Scrolling battlefield** with dense enemy formations and set-piece boss fights
+- **Stars** as persistent currency; **in-run weapon upgrades** as temporary power spikes
+- **Stage medals** (optional objectives) driving replay and difficulty unlocks
+
+Not a pixel-perfect clone — same genre loop, simplified meta for web MVP.
+
+---
+
+## 2. Core Loop
+
+```mermaid
+flowchart LR
+  Hangar[Hangar upgrades] --> Stage[Play stage]
+  Stage --> Combat[Combat + collect stars]
+  Combat --> Boss[Boss gate]
+  Boss --> Results[Results + medals]
+  Results --> Hangar
+  Combat --> Death[Death / retry]
+  Death --> Stage
+```
+
+| Phase | Player action | Reward |
+|-------|---------------|--------|
+| **Hangar** | Spend stars on HP, main cannon, wing guns, magnet, bombs | Permanent power |
+| **Stage** | Dodge, collect drops, rescue survivors (stretch) | Stars, score, medals |
+| **Boss** | Pattern recognition, burst DPS | Stage clear, bonus stars |
+| **Results** | Review medals, retry for perfection | Unlock next stage / difficulty |
+
+**MVP loop (v0.2–v0.5):** Stage select → single ship → boss every N waves → game over → local high score. Hangar deferred to v0.6+.
+
+---
+
+## 3. Reference Mechanics (Sky Force Reloaded)
+
+| System | Original | Our MVP | Stretch |
+|--------|----------|---------|---------|
+| Stages | 16 fixed stages + bonus | 3 handcrafted stages | 8+ stages, bonus stage |
+| Planes | 9 unlockable | 1 starter ship | 3 ships with different stats |
+| Auto-fire | Always on | Always on | Supercharge charge shot |
+| Manual power-ups | Laser, shield, mega bomb | Shield button (stretch) | Full trio + cooldown UI |
+| In-run upgrades | Weapon upgrade pickups | `W` pickup → weapon level 1–4 | Separate fire-rate vs spread tracks |
+| Currency | Stars (persistent) | Score only (v0.1) → stars v0.4 | Shared hangar upgrades |
+| Hangar | 10-tier upgrades per module | — | HP, cannon, wings, magnet, missiles |
+| Medals | 4 objectives per stage | — | No-hit, rescue all, time, score |
+| Difficulty | Normal → Premium → Nightmare | Single curve | Difficulty multiplier on enemy HP/fire |
+| Technicians / Cards | Meta modifiers | — | v1.0+ |
+| Co-op | Local 2P | — | Out of scope |
+
+Sources: [Sky Force Reloaded Wiki](https://sky-force-reloaded-2016.fandom.com/wiki/Sky_Force_Reloaded), [EGM review](https://egmnow.com/sky-force-reloaded-review/).
+
+---
+
+## 4. Player Ship
+
+### 4.1 Movement
+
+- **Portrait playfield:** 9:16 logical canvas (360×640), scaled to viewport
+- **Bounds:** Ship stays in lower ~55% of screen (Sky Force style — dodge space above)
+- **Input:**
+  - Touch: drag to position, **auto-fire while finger down**
+  - Keyboard: WASD/arrows move, Space = fire (hold)
+- **Speed:** ~220 px/s base; no inertia (arcade snappy)
+
+### 4.2 Weapons (MVP)
+
+| Level | Pattern | Unlock |
+|-------|---------|--------|
+| 1 | Single forward bolt | Start |
+| 2 | Dual parallel | `W` pickup or hangar |
+| 3 | Triple spread | pickup / hangar |
+| 4 | Wide spread + faster ROF | pickup cap |
+
+**Stretch:** Homing missiles (secondary slot), laser sweep (manual, limited duration).
+
+### 4.3 Defense
+
+- **Shield bar** (not lives-first): damage depletes shield; empty shield → life lost
+- **3 lives** per run (arcade default)
+- **Invulnerability:** 2s after respawn with blink VFX
+
+### 4.4 Manual abilities (post-MVP)
+
+| Ability | Effect | Cooldown |
+|---------|--------|----------|
+| Energy shield | Full invuln 3s | 1 per stage |
+| Mega bomb | Clear bullets + AoE damage | 1 per stage |
+| Laser | Piercing beam | 8s cooldown |
+
+---
+
+## 5. Enemies
+
+### 5.1 Archetypes (v0.1 implemented → expand)
+
+| Type | Behavior | HP scale | Drops |
+|------|----------|----------|-------|
+| **Scout** | Straight dive, light sway | Low | Stars, occasional `W` |
+| **Fighter** | Sway + aimed shots | Medium | Stars, `S` shield |
+| **Tank** | Slow, high HP | High | Stars, `W` |
+| **Turret** (new) | Fixed position, burst fire | Medium | Stars |
+| **Formation leader** (new) | Spawns wingmen on death | Medium | Bonus stars |
+
+### 5.2 Spawning
+
+- **Scripted waves** per stage section (not pure random)
+- Formations: line, V, pincer, ring around boss
+- Difficulty scales: `hp += wave * 4`, `fireRate -= wave * 0.05`
+
+### 5.3 Bosses
+
+Each stage ends with a **multi-phase boss**:
+
+1. **Phase A:** Bullet patterns (fan, spiral, aimed streams)
+2. **Phase B:** 50% HP — faster patterns + adds
+3. **Phase C:** 25% HP — enrage (screen fill danger zones)
+
+**MVP boss:** Single large entity, 2 phases, weak points optional in v0.5.
+
+---
+
+## 6. Pickups & Economy
+
+### 6.1 In-run pickups
+
+| Pickup | Effect | Visual |
+|--------|--------|--------|
+| Star | +10 score (MVP); +1 star currency (v0.4) | Yellow sparkle |
+| Weapon (`W`) | +1 weapon level (cap 4) | Purple orb |
+| Shield (`S`) | Refill shield to 100% | Green orb |
+| Health (`H`) | +1 life (rare) | Orange heart |
+| Magnet (passive hangar) | Pull stars in radius | — |
+
+### 6.2 Persistent economy (v0.6+)
+
+- Stars banked at stage end (lost on mid-stage quit)
+- Hangar upgrade tree (10 blocks per module, shared across ships)
+- Priority unlock order: **HP → Main cannon → Magnet → Wing cannons → Missiles**
+
+---
+
+## 7. Scoring & Medals
+
+### Score
+
+- Enemy kill points × combo multiplier
+- Combo decays after 3s without kill
+- Stage clear bonus + unused lives bonus
+
+### Medals (stretch, per stage)
+
+| Medal | Condition |
+|-------|-----------|
+| Completion | Finish stage |
+| No damage | Never lose shield |
+| Rescue | Collect all survivor pods |
+| Ace | Score ≥ threshold |
+
+Medals unlock next stage and higher difficulty.
+
+---
+
+## 8. Stages (MVP content plan)
+
+| Stage | Theme | Boss | New mechanic |
+|-------|-------|------|--------------|
+| **1 — Orbital debris** | Asteroid field parallax | Debris core | Basic formations |
+| **2 — Fleet assault** | Enemy capitals | Dreadnought | Turrets + aimed fire |
+| **3 — Orbital fortress** | Station exterior | Command tower | Bullet hell patterns |
+
+Endless mode (current v0.1 wave system) remains as **Arcade** side mode.
+
+---
+
+## 9. UX / Screens
+
+| Screen | MVP | Notes |
+|--------|-----|-------|
+| Title | ✓ (overlay) | LAUNCH button |
+| HUD | ✓ partial | Add star count, combo, boss bar |
+| Pause | — | v0.3 |
+| Hangar | — | v0.6 |
+| Stage select | — | v0.4 |
+| Results | partial | Game over only; add stage clear |
+| Settings | — | SFX volume, control scheme |
+
+Full screen map, tokens, and wireframes: **`docs/UI-SPEC.md`**
+
+**Visual style:** Neon vector on dark parallax (current prototype). Placeholder geometry until sprite pipeline exists.
+
+**Audio:** Silent through v0.5; Web Audio API SFX in v0.6, music loop v0.7.
+
+---
+
+## 10. v0.1 Scaffold Gap Analysis
+
+| Feature | v0.1 status | Gap |
+|---------|-------------|-----|
+| Canvas game loop | ✓ | — |
+| Player move + fire | ✓ | Auto-fire always (Sky Force style) not yet default on keyboard |
+| Shield + lives | ✓ | Lives tied to shield depletion only — OK |
+| Enemy types ×3 | ✓ | Missing turrets, bosses, scripted waves |
+| Power-ups W/S | ✓ | Missing stars as entities, health pickup |
+| Wave progression | ✓ (endless) | Not stage-based |
+| Enemy firing | ✓ | Needs pattern variety |
+| Parallax BG | ✓ | Stage-themed layers missing |
+| Stars currency | ✗ | Score only |
+| Hangar | ✗ | Planned v0.6 |
+| Boss fights | ✗ | Planned v0.5 |
+| Medals | ✗ | Planned v0.8 |
+| Save / progress | ✗ | localStorage v0.4 |
+| AI test agent | ✗ | Planned v0.7 |
+| Audio | ✗ | Planned v0.6+ |
+
+---
+
+## 11. Design Principles
+
+1. **Readable bullets** — enemy projectiles use distinct color/size; never faster than dodgeable at 60fps
+2. **Fair telegraph** — boss patterns announce 0.5s before lethal density
+3. **Mobile thumb zone** — UI clear of bottom 20% on phones
+4. **Compilable sessions** — stage ≤ 5 min; endless for score chasers
+5. **Agent-testable** — expose `window.__GAME_STATE__` for Playwright (see ARCHITECTURE.md)
+
+---
+
+## 12. Out of Scope (v1.0)
+
+- Online tournaments / leaderboards
+- Local co-op
+- 9 planes + card/technician meta
+- Native mobile wrapper (Capacitor) — consider post-web polish
+
+---
+
+## 13. Open Questions (defaults applied)
+
+| Question | Default for this design |
+|----------|-------------------------|
+| Fidelity | Inspired MVP → staged path to hangar/medals |
+| Tech | Stay vanilla canvas + ES modules |
+| Platform | Mobile-first portrait + keyboard |
+| Art | Neon vector placeholders |
+| Audio | Deferred |
+| AI agent | Phase v0.7 per ROADMAP |
+
+---
+
+*Last updated: 2026-06-06*

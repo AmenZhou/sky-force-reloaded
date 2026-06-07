@@ -1,55 +1,85 @@
-export class BulletPool {
+class BulletPool {
   constructor() {
-    this.playerBullets = [];
-    this.enemyBullets = [];
+    this.playerPool = new ObjectPool(() => ({
+      x: 0, y: 0, vx: 0, vy: 0, radius: 4, damage: 0, active: false, color: '#fde047',
+    }), 64);
+    this.enemyPool = new ObjectPool(() => ({
+      x: 0, y: 0, vx: 0, vy: 0, radius: 5, damage: 6, active: false, color: '#fb7185',
+    }), 128);
+  }
+
+  get playerBullets() {
+    return this.playerPool.active;
+  }
+
+  get enemyBullets() {
+    return this.enemyPool.active;
   }
 
   spawnPlayerBullet(x, y, speed, damage) {
-    this.playerBullets.push({
-      x, y, vx: 0, vy: -speed, radius: 4, damage, active: true, color: '#fde047',
-    });
+    const b = this.playerPool.acquire();
+    b.x = x;
+    b.y = y;
+    b.vx = 0;
+    b.vy = -speed;
+    b.radius = 4;
+    b.damage = damage;
+    b.color = '#fde047';
+    return b;
   }
 
   spawnEnemyBullet(x, y, vx, vy, damage = 6) {
-    this.enemyBullets.push({
-      x, y, vx, vy, radius: 5, damage, active: true, color: '#fb7185',
-    });
+    const b = this.enemyPool.acquire();
+    b.x = x;
+    b.y = y;
+    b.vx = vx;
+    b.vy = vy;
+    b.radius = 5;
+    b.damage = damage;
+    b.color = '#fb7185';
+    return b;
   }
 
   update(dt, w, h) {
-    for (const b of this.playerBullets) {
-      if (!b.active) continue;
+    this.playerPool.forEachActive((b) => {
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.y < -20 || b.x < -20 || b.x > w + 20) b.active = false;
-    }
-    for (const b of this.enemyBullets) {
-      if (!b.active) continue;
+      if (b.y < -20 || b.x < -20 || b.x > w + 20) {
+        this.playerPool.release(b);
+      }
+    });
+
+    this.enemyPool.forEachActive((b) => {
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.y > h + 20 || b.x < -20 || b.x > w + 20) b.active = false;
-    }
-    this.playerBullets = this.playerBullets.filter((b) => b.active);
-    this.enemyBullets = this.enemyBullets.filter((b) => b.active);
+      if (b.y > h + 20 || b.x < -20 || b.x > w + 20) {
+        this.enemyPool.release(b);
+      }
+    });
   }
 
   draw(ctx) {
-    for (const b of this.playerBullets) {
+    this.playerPool.forEachActive((b) => {
       ctx.fillStyle = b.color;
       ctx.shadowColor = b.color;
       ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
       ctx.fill();
-    }
-    for (const b of this.enemyBullets) {
+    });
+    this.enemyPool.forEachActive((b) => {
       ctx.fillStyle = b.color;
       ctx.shadowColor = b.color;
       ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
       ctx.fill();
-    }
+    });
     ctx.shadowBlur = 0;
+  }
+
+  clear() {
+    this.playerPool.releaseAll();
+    this.enemyPool.releaseAll();
   }
 }

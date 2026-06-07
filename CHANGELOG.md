@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.1 — 2026-06-06
+
+- Fix: switch from ES modules to classic scripts so the game runs via `file://` (double-click HTML)
+- Fix: stop previous game loop on retry (prevent duplicate rAF loops)
+- Fix: replace `roundRect` with `rect` for broader browser support
+
+## 0.2.0 — 2026-06-06
+
+- Input: relative touch delta, always-on auto-fire, time dilation (25% on idle 100ms)
+- Player: 4px center hitbox (14px visual hull)
+- Gameplay: star pickups, combo multiplier (3s decay), enemy bullet speed cap
+- HUD: run stars, combo, boss HP bar placeholder, dilation overlay
+- Docs: INPUT-SPEC.md; object pool wired for bullets
+
 ## 0.1.0 — 2026-06-06
 
 - Initial scaffold: canvas vertical shmup inspired by Sky Force Reloaded

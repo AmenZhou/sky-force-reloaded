@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "id": "stage-01",
+  "name": "Orbital Debris",
+  "theme": "orbital-debris",
+  "scrollSpeed": 40,
+  "durationSec": 180,
+  "music": null,
+  "medals": {
+    "completion": { "type": "complete" },
+    "annihilation70": { "type": "killPercent", "threshold": 0.7 },
+    "annihilation100": { "type": "killPercent", "threshold": 1.0 },
+    "noDamage": { "type": "noShieldLoss" },
+    "rescueAll": { "type": "rescueAll", "survivorIds": ["s1", "s2"] }
+  },
+  "difficultyMultipliers": {
+    "normal": { "enemyHp": 1, "bulletSpeed": 1, "starReward": 1 },
+    "hard": { "enemyHp": 1.5, "bulletSpeed": 1.2, "starReward": 1.5 },
+    "insane": { "enemyHp": 2, "bulletSpeed": 1.4, "starReward": 2 },
+    "nightmare": { "enemyHp": 3, "bulletSpeed": 1.6, "starReward": 3 }
+  },
+  "paths": {
+    "dive-left": {
+      "type": "bezier",
+      "points": [
+        { "x": 0.5, "y": -0.05 },
+        { "x": 0.2, "y": 0.3 },
+        { "x": 0.8, "y": 0.6 },
+        { "x": 0.5, "y": 1.1 }
+      ],
+      "note": "Normalized 0–1 coords; y>1 exits bottom"
+    },
+    "strafe-top": {
+      "type": "linear",
+      "from": { "x": 0.1, "y": -0.08 },
+      "to": { "x": 0.9, "y": 0.15 },
+      "durationSec": 4
+    }
+  },
+  "bulletPatterns": {
+    "aim-single": {
+      "type": "aimed",
+      "count": 1,
+      "speed": 180,
+      "damage": 6
+    },
+    "fan-5": {
+      "type": "fan",
+      "count": 5,
+      "spreadDeg": 60,
+      "speed": 160,
+      "damage": 5,
+      "telegraphMs": 500
+    },
+    "spiral-slow": {
+      "type": "spiral",
+      "arms": 2,
+      "speed": 120,
+      "angularSpeed": 2.5,
+      "durationSec": 8,
+      "telegraphMs": 800
+    }
+  },
+  "timeline": [
+    {
+      "atSec": 0,
+      "action": "banner",
+      "text": "STAGE 1 — ORBITAL DEBRIS"
+    },
+    {
+      "atSec": 2,
+      "action": "spawnGroup",
+      "groupId": "opening-scouts",
+      "enemies": [
+        { "type": "scout", "path": "dive-left", "pathOffset": 0 },
+        { "type": "scout", "path": "dive-left", "pathOffset": 0.15 },
+        { "type": "scout", "path": "dive-left", "pathOffset": 0.3 }
+      ]
+    },
+    {
+      "atSec": 8,
+      "action": "spawn",
+      "enemy": "fighter",
+      "x": 0.25,
+      "y": -0.06,
+      "pattern": "aim-single",
+      "patternIntervalSec": 1.8
+    },
+    {
+      "atSec": 8,
+      "action": "spawn",
+      "enemy": "fighter",
+      "x": 0.75,
+      "y": -0.06,
+      "pattern": "aim-single",
+      "patternIntervalSec": 1.8
+    },
+    {
+      "atSec": 18,
+      "action": "spawnGroup",
+      "groupId": "tank-escort",
+      "enemies": [
+        { "type": "tank", "x": 0.5, "y": -0.1 },
+        { "type": "scout", "path": "strafe-top", "pathOffset": 0 },
+        { "type": "scout", "path": "strafe-top", "pathOffset": 0.5 }
+      ]
+    },
+    {
+      "atSec": 25,
+      "action": "spawnSurvivor",
+      "id": "s1",
+      "x": 0.35,
+      "y": 0.45,
+      "holdSec": 2
+    },
+    {
+      "atSec": 35,
+      "action": "spawnSurvivor",
+      "id": "s2",
+      "x": 0.65,
+      "y": 0.55,
+      "holdSec": 2
+    },
+    {
+      "atSec": 45,
+      "action": "spawnBoss",
+      "type": "debris-core",
+      "x": 0.5,
+      "y": -0.15,
+      "phases": [
+        {
+          "hpPercent": 100,
+          "patterns": ["fan-5"],
+          "patternIntervalSec": 2.5
+        },
+        {
+          "hpPercent": 50,
+          "patterns": ["fan-5", "spiral-slow"],
+          "patternIntervalSec": 1.8,
+          "scrollSpeedBoost": 10
+        }
+      ]
+    },
+    {
+      "atSec": 120,
+      "action": "stageComplete"
+    }
+  ]
+}

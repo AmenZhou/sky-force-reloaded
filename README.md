@@ -4,6 +4,11 @@ Vertical shoot-em-up in the browser, inspired by **Sky Force Reloaded** — scro
 
 ## Quick start
 
+**Option A — open the file (simplest)**  
+Double-click `sky_force_reloaded.html` or open from your editor preview.
+
+**Option B — local HTTP server (recommended if scripts fail to load)**
+
 ```bash
 cd /Users/haimengzhou/apps/sky-force-reloaded
 python3 -m http.server 8766
@@ -33,6 +38,10 @@ Open **http://localhost:8766/sky_force_reloaded.html**
 ```
 sky-force-reloaded/
 ├── sky_force_reloaded.html   # Entry page
+├── docs/
+│   ├── GDD.md                # Game design document
+│   ├── ARCHITECTURE.md       # Technical architecture
+│   └── ROADMAP.md            # Phased delivery plan
 ├── js/
 │   ├── main.js               # Bootstrap + HUD
 │   ├── game.js               # Game loop + collisions
@@ -43,6 +52,10 @@ sky-force-reloaded/
 │   └── background.js
 └── README.md
 ```
+
+## Design docs
+
+See **`docs/GDD.md`**, **`docs/DRD.md`**, **`docs/UI-SPEC.md`**, **`docs/ARCHITECTURE.md`**, and **`docs/ROADMAP.md`** for the full design-first plan (2026-06-06).
 
 ## Roadmap
 

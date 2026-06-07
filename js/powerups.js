@@ -4,7 +4,7 @@ const COLORS = {
   life: '#fb923c',
 };
 
-export class PowerUpManager {
+class PowerUpManager {
   constructor() {
     this.list = [];
   }
