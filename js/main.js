@@ -5,6 +5,8 @@ const dilationOverlay = document.getElementById('dilation-overlay');
 const hitFlash = document.getElementById('hit-flash');
 const speedBadge = document.getElementById('speed-badge');
 const bossBar = document.getElementById('boss-bar');
+const waveBanner = document.getElementById('wave-banner');
+const bossNameEl = document.getElementById('boss-name');
 const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 
@@ -67,6 +69,18 @@ function updateSpeedBadge(timeScale) {
 }
 
 let hitToastTimer = 0;
+let bannerHideTimer = 0;
+
+function showBanner(text, kind = 'wave') {
+  if (!waveBanner) return;
+  waveBanner.textContent = text;
+  waveBanner.className = `wave-banner visible ${kind}`;
+  clearTimeout(bannerHideTimer);
+  bannerHideTimer = setTimeout(() => {
+    waveBanner.classList.remove('visible');
+  }, 2400);
+}
+
 function showHitToast(lostLife) {
   if (!hitFlash) return;
   hitFlash.textContent = lostLife ? 'LIFE LOST!' : 'HIT!';
@@ -123,6 +137,16 @@ function startGame() {
   if (hitFlash) hitFlash.classList.remove('visible');
 
   game = new Game(canvas, {
+    onWaveStart(wave) {
+      if (wave % 5 !== 0) showBanner(`WAVE ${wave}`, 'wave');
+    },
+    onBossSpawn({ name }) {
+      if (bossNameEl) bossNameEl.textContent = name;
+      showBanner('BOSS INCOMING', 'boss');
+    },
+    onBossDefeated() {
+      showBanner('BOSS CLEAR', 'clear');
+    },
     onPlayerHit({ lostLife }) {
       showHitToast(lostLife);
     },
@@ -153,6 +177,7 @@ function startGame() {
         bossBar.classList.remove('hidden');
         hud.bossHpFill.style.width = `${state.bossHpPct}%`;
         hud.bossHpText.textContent = `${Math.round(state.bossHpPct)}%`;
+        if (bossNameEl && state.bossName) bossNameEl.textContent = state.bossName;
       } else {
         bossBar.classList.add('hidden');
       }
@@ -163,6 +188,7 @@ function startGame() {
       overlayGameOver.classList.remove('hidden');
     },
   });
+  showBanner('WAVE 1', 'wave');
   game.start();
 }
 
@@ -183,6 +209,9 @@ window.__SKY_FORCE__ = {
       weaponLevel: game.player.weaponLevel,
       combo: game.combo,
       timeScale: game.timeScale,
+      bossActive: game.bossActive,
+      bossHpPct: game.bossHpPct,
+      bossName: game.boss?.name || null,
       playerX: game.player.x,
       playerY: game.player.y,
       enemyBullets: game.bullets.enemyBullets.map((b) => ({
@@ -199,6 +228,14 @@ window.__SKY_FORCE__ = {
           radius: e.radius,
           type: e.type,
         })),
+      boss: game.boss?.alive
+        ? {
+          x: Math.round(game.boss.x),
+          y: Math.round(game.boss.y),
+          radius: game.boss.radius,
+          hpPct: Math.round(game.boss.hpPct),
+        }
+        : null,
       powerups: game.powerups.list
         .filter((p) => p.active)
         .map((p) => ({ x: Math.round(p.x), y: Math.round(p.y), type: p.type })),

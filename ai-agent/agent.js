@@ -114,6 +114,7 @@ async function main() {
   let turnsCompleted = 0;
   let lastAction = null;
   let sameActionStreak = 0;
+  let bossTicks = 0;
 
   for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
     const state = await readState(page);
@@ -122,6 +123,7 @@ async function main() {
 
     if (state.shieldPct < lastShield - 1) hits += 1;
     if (state.timeScale < 1) slowTicks += 1;
+    if (state.bossActive) bossTicks += 1;
     lastShield = state.shieldPct;
     lastScore = state.score;
 
@@ -137,6 +139,8 @@ async function main() {
       combo: state.combo,
       timeScale: state.timeScale,
       enemyBullets: (state.enemyBullets || []).length,
+      bossActive: !!state.bossActive,
+      bossHpPct: state.bossHpPct ?? 100,
     });
 
     const action = USE_HEURISTIC
@@ -161,6 +165,7 @@ async function main() {
     finalRunStars: final?.runStars ?? 0,
     hitsTaken: hits,
     slowMoTicks: slowTicks,
+    bossTicks,
     running: final?.running ?? false,
   });
 

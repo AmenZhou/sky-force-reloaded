@@ -56,17 +56,21 @@ function weightedBulletDodge(state, cfg) {
 function nearestEnemyThreat(state) {
   let worst = null;
   let worstGap = Infinity;
-  for (const e of state.enemies || []) {
+  const targets = [...(state.enemies || [])];
+  if (state.boss) targets.push({ ...state.boss, type: 'boss' });
+  for (const e of targets) {
     const dx = e.x - state.playerX;
     const dy = e.y - state.playerY;
-    if (dy < -90 || dy > 70) continue;
+    const margin = e.type === 'boss' ? 70 : 90;
+    if (dy < -margin || dy > 70) continue;
     const gap = Math.hypot(dx, dy) - (e.radius || 14);
     if (gap < worstGap) {
       worstGap = gap;
       worst = { dx, gap };
     }
   }
-  return worst && worst.gap < 50 ? worst : null;
+  const threshold = state.boss ? 65 : 50;
+  return worst && worst.gap < threshold ? worst : null;
 }
 
 function avoidRepeat(action, lastAction, streak, turn) {
@@ -86,7 +90,7 @@ export function pickHeuristicMove(state, turn, cfg, context = {}) {
     ? cfg.weaponPickupRange + 40
     : cfg.weaponPickupRange;
 
-  if (bullets.length > cfg.bulletHellThreshold) {
+  if (bullets.length > cfg.bulletHellThreshold || state.boss) {
     let action;
     if (state.playerX > cfg.safeZoneXMax) action = 'move_left';
     else if (state.playerX < cfg.safeZoneXMin) action = 'move_right';

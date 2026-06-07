@@ -22,6 +22,8 @@ class Game {
     this.dilationScale = 0.25;
     this.bossActive = false;
     this.bossHpPct = 100;
+    this.boss = null;
+    this.waveBannerTimer = 0;
     this.hitFlash = 0;
     this.screenShake = 0;
     this.maxLives = 3;
@@ -163,11 +165,24 @@ class Game {
     this._resolveCollisions();
 
     if (this.enemyKillsThisWave >= this.killsForNextWave) {
+      const prevWave = this.wave;
       this.wave += 1;
       this.enemyKillsThisWave = 0;
       this.killsForNextWave = Math.min(30, this.killsForNextWave + 4);
       this.scrollSpeed += 4;
+      this.waveBannerTimer = 2.2;
+      this.callbacks.onWaveStart?.(this.wave);
+      if (this.wave % 5 === 0 && this.wave !== prevWave) {
+        this._spawnWaveBoss();
+      }
     }
+
+    if (this.boss?.alive) {
+      this.boss.update(dt, this.bullets, this.player, this.wave);
+      this.bossHpPct = this.boss.hpPct;
+    }
+
+    if (this.waveBannerTimer > 0) this.waveBannerTimer -= rawDt;
 
     if (this.hitFlash > 0) this.hitFlash -= rawDt;
     if (this.screenShake > 0) this.screenShake -= rawDt;
@@ -184,6 +199,8 @@ class Game {
       timeScale: this.timeScale,
       bossActive: this.bossActive,
       bossHpPct: this.bossHpPct,
+      bossName: this.boss?.name || null,
+      waveBanner: this.waveBannerTimer > 0 ? this.wave : 0,
       hitFlash: this.hitFlash,
     });
   }
@@ -207,7 +224,56 @@ class Game {
     return points;
   }
 
+  _spawnWaveBoss() {
+    this.boss = new WaveBoss(this.canvas.width / 2, 90, this.wave, this.canvas.width);
+    this.bossActive = true;
+    this.bossHpPct = 100;
+    this.enemies.setSpawnPaused(true);
+    this.screenShake = 0.35;
+    this.callbacks.onBossSpawn?.({ name: this.boss.name, wave: this.wave });
+  }
+
+  _onBossDefeated() {
+    const x = this.boss.x;
+    const y = this.boss.y;
+    this.boss = null;
+    this.bossActive = false;
+    this.bossHpPct = 100;
+    this.enemies.setSpawnPaused(false);
+    this._addScore(3500);
+    this.runStars += 25;
+    for (let i = 0; i < 12; i += 1) {
+      const angle = (i / 12) * Math.PI * 2;
+      this.stars.spawn(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20, 18);
+    }
+    this.powerups.spawn(x, y, 'weapon');
+    this.powerups.spawn(x - 30, y + 10, 'shield');
+    this.waveBannerTimer = 2.5;
+    this.callbacks.onBossDefeated?.({ wave: this.wave });
+  }
+
   _resolveCollisions() {
+    if (this.boss?.alive) {
+      for (const bullet of [...this.bullets.playerBullets]) {
+        if (!bullet.active) continue;
+        if (this._hit(bullet, this.boss)) {
+          this.bullets.playerPool.release(bullet);
+          if (this.boss.takeDamage(bullet.damage)) {
+            this._addScore(this.boss.points);
+            this.enemyKillsThisWave += 1;
+            this._onBossDefeated();
+          }
+          break;
+        }
+      }
+
+      if (this.boss?.alive && this._hit(this.boss, this.player, 0.85, true)) {
+        const lostLife = this.player.takeDamage(22);
+        this._notifyHit(22, lostLife);
+        if (lostLife) this._onPlayerDeath();
+      }
+    }
+
     for (const bullet of [...this.bullets.playerBullets]) {
       for (const enemy of this.enemies.list) {
         if (!enemy.alive || !bullet.active) continue;
@@ -301,6 +367,7 @@ class Game {
     this.stars.draw(ctx);
     this.powerups.draw(ctx);
     this.enemies.draw(ctx);
+    if (this.boss?.alive) this.boss.draw(ctx);
     this.bullets.draw(ctx);
     this.player.draw(ctx);
     if (this.hitFlash > 0) {

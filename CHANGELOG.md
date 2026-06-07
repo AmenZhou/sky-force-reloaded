@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4 — 2026-06-07
+
+- Gameplay: wave boss every 5 waves (Debris Core, 2 phases), wave/boss banners
+- Enemies: diver swoop formation, elite golden fighters every 3 waves
+- Agent: logs bossActive/bossHpPct; heuristic avoids boss body + bullet-hell mode during fights
+
 ## 0.3.3 — 2026-06-07
 
 - Agent: velocity-weighted bullet dodge, enemy ram avoidance, anti-spam streak breaker
