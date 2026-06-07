@@ -6,6 +6,11 @@
 - Fix: stop previous game loop on retry (prevent duplicate rAF loops)
 - Fix: replace `roundRect` with `rect` for broader browser support
 
+## 0.3.2 — 2026-06-07
+
+- Agent: LLM mode (`--model claude|openai|openai-mini`), log-driven tuner, self-improve loop
+- Agent: heuristic params externalized to `ai-agent/agent-config.json`
+
 ## 0.3.1 — 2026-06-07
 
 - Fix: runStars now banks star entity value (÷10), not +1 per pickup

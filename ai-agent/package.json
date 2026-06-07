@@ -1,12 +1,19 @@
 {
   "name": "sky-force-ai-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
-    "start": "node agent.js --headless --turns 60 --tick 500",
+    "start": "node agent.js --heuristic --headless --turns 80 --tick 500",
+    "play": "node agent.js --heuristic --headless --turns 80 --tick 500",
+    "play:llm": "node agent.js --model openai --headless --turns 30 --tick 800",
+    "tune": "node tune.js",
+    "improve": "node improve.js --headless --generations 3 --turns 60 --tick 500",
+    "analyze": "node analyze-logs.js",
     "install-browsers": "npx playwright install chromium"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "openai": "^6.39.0",
     "playwright": "^1.49.0"
   }
 }
