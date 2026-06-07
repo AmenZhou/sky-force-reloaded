@@ -2,6 +2,12 @@
 
 Vertical shoot-em-up in the browser, inspired by **Sky Force Reloaded** — scrolling starfield, twin-stick-style movement, wave-based enemies, shield + weapon power-ups.
 
+## Play online
+
+**https://amenzhou.github.io/sky-force-reloaded/**
+
+(GitHub Pages — deploys automatically on push to `main`.)
+
 ## Quick start
 
 **Option A — open the file (simplest)**  
