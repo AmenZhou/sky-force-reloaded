@@ -45,15 +45,18 @@ class WaveBoss {
     this.fireTimer -= dt;
     if (this.fireTimer > 0) return;
 
-    const interval = (this.phase === 1 ? 0.95 : 0.48) / this.fireScale;
+    const bal = window.ENEMY_BALANCE?.boss || {};
+    const p1 = bal.phase1 || { bullets: 5, interval: 1.12 };
+    const p2 = bal.phase2 || { arms: 7, interval: 0.58, extraAimed: false };
+    const interval = (this.phase === 1 ? p1.interval : p2.interval) / this.fireScale;
     this.fireTimer = interval;
     const damage = (7 + Math.max(0, wave - 2)) * (this.phase === 2 ? 1.15 : 1);
-    const speed = Math.min(215, 158 + wave * 2 + (this.phase === 2 ? 12 : 0));
+    const speed = Math.min(205, 150 + wave * 2 + (this.phase === 2 ? 10 : 0));
 
     if (this.phase === 1) {
-      const count = 7;
+      const count = p1.bullets ?? 5;
       for (let i = 0; i < count; i += 1) {
-        const angle = -Math.PI / 2 + ((i / (count - 1)) - 0.5) * 1.05;
+        const angle = -Math.PI / 2 + ((i / (count - 1)) - 0.5) * 0.95;
         bulletPool.spawnEnemyBullet(
           this.x,
           this.y + this.radius,
@@ -63,7 +66,7 @@ class WaveBoss {
         );
       }
     } else {
-      const arms = 10;
+      const arms = p2.arms ?? 7;
       const base = this.swayT * 2.8;
       for (let i = 0; i < arms; i += 1) {
         const angle = base + (i / arms) * Math.PI * 2;
@@ -75,13 +78,15 @@ class WaveBoss {
           damage,
         );
       }
-      bulletPool.spawnEnemyBullet(
-        this.x,
-        this.y + this.radius,
-        (player.x - this.x) * 0.6,
-        200,
-        damage + 1,
-      );
+      if (p2.extraAimed) {
+        bulletPool.spawnEnemyBullet(
+          this.x,
+          this.y + this.radius,
+          (player.x - this.x) * 0.6,
+          200,
+          damage + 1,
+        );
+      }
     }
   }
 

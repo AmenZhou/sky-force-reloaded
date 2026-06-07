@@ -20,7 +20,7 @@ const TYPES = {
     accent: '#22d3ee',
     dropChance: 0.18,
     dropType: 'shield',
-    fireRate: 1.8,
+    fireRate: 0,
     label: 'FIGHTER',
   },
   tank: {
@@ -32,7 +32,7 @@ const TYPES = {
     accent: '#78716c',
     dropChance: 0.25,
     dropType: 'weapon',
-    fireRate: 2.4,
+    fireRate: 0,
     label: 'TANK',
   },
   diver: {
@@ -51,6 +51,10 @@ const TYPES = {
 
 function makeEnemy(typeKey, x, y, wave, opts = {}) {
   const t = TYPES[typeKey];
+  const bal = window.ENEMY_BALANCE || {};
+  let fireRate = t.fireRate;
+  if (typeKey === 'fighter') fireRate = bal.fighterFireRate ?? 2.65;
+  if (typeKey === 'tank') fireRate = bal.tankFireRate ?? 3.35;
   const enemy = {
     type: typeKey,
     x,
@@ -65,7 +69,7 @@ function makeEnemy(typeKey, x, y, wave, opts = {}) {
     label: t.label,
     dropChance: t.dropChance,
     dropType: t.dropType,
-    fireRate: t.fireRate,
+    fireRate,
     fireTimer: Math.random() * 2,
     sway: Math.random() * Math.PI * 2,
     vx: opts.vx || 0,
@@ -250,14 +254,23 @@ class EnemyManager {
   }
 
   tryFire(bulletPool, player, dt, wave = 1, bulletMult = 1) {
+    const bal = window.ENEMY_BALANCE || {};
+    let shots = 0;
+    const maxShots = bal.maxShootersPerTick ?? 4;
     for (const e of this.list) {
+      if (shots >= maxShots) break;
       if (!e.alive || e.fireRate <= 0 || e.fireTimer > 0) continue;
       if (e.y < 40 || e.y > this.h * 0.65) continue;
+      if (Math.random() < (bal.fireSkipChance ?? 0)) continue;
       e.fireTimer = e.fireRate;
+      shots += 1;
       const dx = player.x - e.x;
       const dy = player.y - e.y;
       const len = Math.hypot(dx, dy) || 1;
-      const speed = Math.min(215, (172 + wave * 2) * bulletMult);
+      const speed = Math.min(
+        bal.bulletSpeedCap ?? 205,
+        ((bal.bulletSpeedBase ?? 165) + wave * (bal.bulletSpeedWave ?? 1.5)) * bulletMult,
+      );
       const damage = 6 + Math.max(0, wave - 2);
       bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed, damage);
     }

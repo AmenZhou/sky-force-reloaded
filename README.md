@@ -71,6 +71,7 @@ sky-force-reloaded/
 | **MECHANICS-DEPTH** | Escort crates, technicians, EMP/darkness stages, modular bosses |
 | **UI-SPEC** | Hangar, HUD, results screens |
 | **ROADMAP** | v0.2 → v1.2 delivery phases |
+| **BACKLOG-v0.7-v1.0** | Prioritized tickets to v1.0 |
 
 ## Roadmap (summary)
 

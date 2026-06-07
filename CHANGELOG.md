@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 — 2026-06-07
+
+- Balance: fewer enemy bullets — `js/balance.js` (slower fire, shooter cap, thinner boss patterns)
+
 ## 0.6.0 — 2026-06-07
 
 - Collection album: 12 permanent cards, unconfirmed-until-clear high-stakes drops from elites/crates
