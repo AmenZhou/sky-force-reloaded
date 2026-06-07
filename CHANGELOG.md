@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — 2026-06-07
+
+- Visual pass inspired by Sky Force Reloaded reference: terrain stage background, red fighter, blue laser beam, orange tracers
+- Brighter star showers + explosion particles on kills and destructibles
+- HUD: spaced score (`054 758` style), hostage counter, NICE/GREAT combo feedback
+- Destructibles: green card crates, ground turret silhouettes with damage smoke
+
 ## 0.6.1 — 2026-06-07
 
 - Balance: fewer enemy bullets — `js/balance.js` (slower fire, shooter cap, thinner boss patterns)

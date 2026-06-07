@@ -164,38 +164,63 @@ class Player {
     }
 
     if (this.laserActive > 0) {
-      ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
-      ctx.fillRect(-3, -320, 6, 300);
+      const beamH = 340;
+      const core = ctx.createLinearGradient(0, -beamH, 0, 0);
+      core.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      core.addColorStop(0.15, 'rgba(186, 230, 253, 0.9)');
+      core.addColorStop(0.5, 'rgba(56, 189, 248, 0.75)');
+      core.addColorStop(1, 'rgba(14, 165, 233, 0.4)');
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = core;
+      ctx.fillRect(-8, -beamH, 16, beamH);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.fillRect(-2, -beamH, 4, beamH);
+      ctx.shadowBlur = 0;
     }
 
-    if (this.hitFlash > 0) {
-      ctx.shadowColor = '#fb7185';
-      ctx.shadowBlur = 18;
-    }
-
-    const grad = ctx.createRadialGradient(0, 8, 0, 0, 8, 22);
-    grad.addColorStop(0, 'rgba(56, 189, 248, 0.9)');
-    grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-    ctx.fillStyle = grad;
+    const exhaust = ctx.createRadialGradient(0, 14, 0, 0, 14, 20);
+    exhaust.addColorStop(0, 'rgba(251, 146, 60, 0.95)');
+    exhaust.addColorStop(0.5, 'rgba(239, 68, 68, 0.5)');
+    exhaust.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    ctx.fillStyle = exhaust;
     ctx.beginPath();
-    ctx.ellipse(0, 10, 8, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 14, 10, 18, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#e2e8f0';
-    ctx.strokeStyle = '#38bdf8';
+    ctx.fillStyle = '#fef2f2';
+    ctx.strokeStyle = '#dc2626';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, -18);
-    ctx.lineTo(12, 14);
-    ctx.lineTo(0, 8);
-    ctx.lineTo(-12, 14);
+    ctx.moveTo(0, -20);
+    ctx.lineTo(13, 12);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-13, 12);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#0ea5e9';
+    ctx.fillStyle = '#ef4444';
+    ctx.strokeStyle = '#fca5a5';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(0, -4, 4, 7, 0, 0, Math.PI * 2);
+    ctx.moveTo(-13, 8);
+    ctx.lineTo(-22, 4);
+    ctx.lineTo(-13, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(13, 8);
+    ctx.lineTo(22, 4);
+    ctx.lineTo(13, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 5, 8, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (this.shield > 0) {

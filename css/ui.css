@@ -734,6 +734,47 @@ kbd.key {
   font-weight: 700;
   min-width: 2.5rem;
 }
+.score-sky {
+  min-width: 7.5rem;
+  justify-content: center;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.score-sky-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.12em;
+  color: #f8fafc !important;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
+}
+
+.stat-chip.hostages .value {
+  color: #fcd34d;
+  font-variant-numeric: tabular-nums;
+}
+
+.nice-feedback {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  opacity: 0;
+  pointer-events: none;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  color: #fef08a;
+  text-shadow: 0 0 16px rgba(250, 204, 21, 0.85);
+  transition: opacity 0.12s ease, transform 0.2s ease;
+}
+
+.nice-feedback.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
 .ability-btn span { color: #fbbf24; margin-left: 0.15rem; }
 
 /* ── Run medal track + slide banners ── */

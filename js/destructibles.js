@@ -78,33 +78,53 @@ class DestructibleManager {
       const pct = d.hp / d.maxHp;
 
       if (d.type === 'crate') {
-        ctx.fillStyle = '#78350f';
-        ctx.strokeStyle = '#fbbf24';
+        ctx.shadowColor = '#22c55e';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = '#14532d';
+        ctx.strokeStyle = '#4ade80';
         ctx.lineWidth = 2;
-        ctx.fillRect(-14, -14, 28, 28);
-        ctx.strokeRect(-14, -14, 28, 28);
-        ctx.strokeStyle = '#92400e';
+        ctx.fillRect(-15, -15, 30, 30);
+        ctx.strokeRect(-15, -15, 30, 30);
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.35)';
         ctx.beginPath();
-        ctx.moveTo(-14, 0);
-        ctx.lineTo(14, 0);
-        ctx.moveTo(0, -14);
-        ctx.lineTo(0, 14);
-        ctx.stroke();
+        ctx.moveTo(0, -9);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(0, 9);
+        ctx.lineTo(-8, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
       } else if (d.type === 'radar') {
-        ctx.fillStyle = '#334155';
+        ctx.fillStyle = '#475569';
         ctx.strokeStyle = pct > 0.5 ? '#94a3b8' : '#f97316';
         ctx.lineWidth = 2;
-        ctx.fillRect(-18, -8, 36, 40);
-        ctx.strokeRect(-18, -8, 36, 40);
-        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-22, 4, 44, 22);
+        ctx.strokeRect(-22, 4, 44, 22);
+        ctx.fillRect(-14, -6, 28, 12);
+        ctx.strokeRect(-14, -6, 28, 12);
+        ctx.fillStyle = '#334155';
         ctx.beginPath();
-        ctx.arc(0, -18, 14, 0, Math.PI * 2);
+        ctx.arc(0, -20, 16, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.strokeStyle = '#22d3ee';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, -18, 8, -0.8, 0.8);
+        ctx.moveTo(0, -20);
+        ctx.lineTo(0, -36);
         ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, -20, 10, -1.1, -0.1);
+        ctx.stroke();
+        if (pct < 0.6) {
+          ctx.fillStyle = `rgba(100, 116, 139, ${0.5 - pct * 0.4})`;
+          ctx.beginPath();
+          ctx.ellipse(-8, -28, 6, 10, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(10, -24, 5, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else if (d.type === 'fuel') {
         ctx.fillStyle = '#450a0a';
         ctx.strokeStyle = '#ef4444';

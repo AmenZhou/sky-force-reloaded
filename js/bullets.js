@@ -36,7 +36,7 @@ class BulletPool {
     b.vy = -speed;
     b.radius = 4;
     b.damage = damage;
-    b.color = '#fde047';
+    b.color = '#ff9f43';
     return b;
   }
 
@@ -103,11 +103,19 @@ class BulletPool {
 
   draw(ctx) {
     this.playerPool.forEachActive((b) => {
+      ctx.shadowColor = '#fb923c';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * 0.45, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = b.color;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 237, 213, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y + 4, b.radius * 0.6, b.radius * 1.8, 0, 0, Math.PI * 2);
       ctx.fill();
     });
     this.missilePool.forEachActive((m) => {

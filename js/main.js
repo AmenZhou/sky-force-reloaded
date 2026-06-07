@@ -6,6 +6,8 @@ const overlayGameOver = document.getElementById('overlay-gameover');
 const overlayStageClear = document.getElementById('overlay-stage-clear');
 const dilationOverlay = document.getElementById('dilation-overlay');
 const hitFlash = document.getElementById('hit-flash');
+const niceFeedback = document.getElementById('nice-feedback');
+const chipHostages = document.getElementById('chip-hostages');
 const speedBadge = document.getElementById('speed-badge');
 const abilityBar = document.getElementById('ability-bar');
 const bossBar = document.getElementById('boss-bar');
@@ -67,6 +69,7 @@ const hud = {
   clearScore: document.getElementById('clear-score'),
   clearRunStars: document.getElementById('clear-run-stars'),
   clearBankedStars: document.getElementById('clear-banked-stars'),
+  hostages: document.getElementById('hud-hostages'),
 };
 
 let lastScore = 0;
@@ -401,6 +404,25 @@ function showBanner(text, kind = 'wave') {
   bannerHideTimer = setTimeout(() => waveBanner.classList.remove('visible'), 2400);
 }
 
+function formatSkyScore(n) {
+  const s = String(Math.max(0, Math.floor(n)));
+  if (s.length <= 6) {
+    const padded = s.padStart(6, '0');
+    return `${padded.slice(0, 3)} ${padded.slice(3)}`;
+  }
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+let niceFeedbackTimer = 0;
+
+function showNiceFeedback(text) {
+  if (!niceFeedback || !text) return;
+  niceFeedback.textContent = text;
+  niceFeedback.classList.add('visible');
+  clearTimeout(niceFeedbackTimer);
+  niceFeedbackTimer = setTimeout(() => niceFeedback.classList.remove('visible'), 900);
+}
+
 function showHitToast(lostLife) {
   if (!hitFlash) return;
   hitFlash.textContent = lostLife ? 'LIFE LOST!' : 'HIT!';
@@ -464,11 +486,12 @@ function buildCallbacks() {
     onLootPickup(kind, label) {
       showMedalSlide(kind === 'card' ? `CARD: ${label}` : `PART: ${label}`, false);
     },
+    onNiceFeedback(text) { showNiceFeedback(text); },
     onAbilityUsed() {
       if (game) updateAbilityBar(game.runCharges);
     },
     onHudUpdate(state) {
-      hud.score.textContent = state.score.toLocaleString();
+      hud.score.textContent = formatSkyScore(state.score);
       if (state.score > lastScore) {
         hud.scoreChip.classList.remove('pop');
         void hud.scoreChip.offsetWidth;
@@ -476,6 +499,13 @@ function buildCallbacks() {
       }
       lastScore = state.score;
       hud.stars.textContent = state.runStars.toLocaleString();
+      if (chipHostages && hud.hostages) {
+        const showH = state.mode === 'stage' && state.hostagesTotal > 0;
+        chipHostages.classList.toggle('hidden', !showH);
+        if (showH) {
+          hud.hostages.textContent = String(state.hostagesRescued || 0).padStart(3, '0');
+        }
+      }
       hud.wave.textContent = state.wave;
       if (hud.waveLabel) hud.waveLabel.textContent = state.mode === 'stage' ? 'Section' : 'Wave';
       updateLives(state.lives, state.maxLives || 3);

@@ -17,9 +17,12 @@
       SKY FORCE
     </div>
     <div class="flex gap-1.5 md:gap-2">
-      <div id="chip-score" class="stat-chip score">
-        <span class="label">Score</span>
-        <span id="hud-score" class="value">0</span>
+      <div id="chip-score" class="stat-chip score score-sky">
+        <span id="hud-score" class="value score-sky-value">000 000</span>
+      </div>
+      <div id="chip-hostages" class="stat-chip hostages hidden">
+        <span class="label">👤</span>
+        <span id="hud-hostages" class="value">0</span>
       </div>
       <div class="stat-chip stars">
         <span class="label">★ Run</span>
@@ -66,6 +69,7 @@
         <span class="title-font dilation-label text-xs tracking-[0.4em] font-bold">◈ SLOW ◈</span>
       </div>
       <div id="hit-flash" class="hit-toast pointer-events-none" aria-live="polite">HIT!</div>
+      <div id="nice-feedback" class="nice-feedback pointer-events-none" aria-live="polite"></div>
       <div id="speed-badge" class="speed-badge pointer-events-none">100%</div>
       <div id="ability-bar" class="ability-bar hidden pointer-events-auto">
         <button type="button" id="btn-ability-laser" class="ability-btn" title="Laser (Z)">⚡ <span id="charge-laser">0</span></button>
@@ -186,6 +190,7 @@
 
   <script src="js/object-pool.js"></script>
   <script src="js/background.js"></script>
+  <script src="js/fx.js"></script>
   <script src="js/bullets.js"></script>
   <script src="js/stars.js"></script>
   <script src="js/powerups.js"></script>

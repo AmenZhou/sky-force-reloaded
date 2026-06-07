@@ -11,6 +11,7 @@ class Game {
     this.hostages = new HostageManager();
     this.destructibles = new DestructibleManager();
     this.runLoot = new RunLootManager();
+    this.fx = new FxManager();
     this.medalTracker = null;
     this.runHits = 0;
     this.runCharges = {};
@@ -139,6 +140,7 @@ class Game {
     this.lastTime = performance.now();
 
     if (this.mode === 'stage' && this.stageData) {
+      this.background.setTheme('terrain');
       this.enemies.setSpawnPaused(true);
       this.stageDirector = new StageDirector(this.canvas.width, this.canvas.height, {
         onBanner: (text, kind) => this.callbacks.onBanner?.(text, kind),
@@ -165,6 +167,8 @@ class Game {
       this.medalTracker.reset(2);
       this.callbacks.onMedalHudUpdate?.(this.medalTracker.hudState());
       this.callbacks.onStageStart?.(this.stageData);
+    } else {
+      this.background.setTheme('space');
     }
 
     this.rafId = requestAnimationFrame((t) => this.loop(t));
@@ -236,6 +240,7 @@ class Game {
       this.hangarStats.magnetRadius,
       this.hangarStats.magnetStrength,
     );
+    this.fx.update(dt);
     this.hostages.update(dt, this.player, (h) => {
       const bonus = 5 * (this.hangarStats.starPickupMult || 1);
       this.runStars += Math.round(bonus);
@@ -319,6 +324,8 @@ class Game {
       hitFlash: this.hitFlash,
       medalHud: this.medalTracker?.hudState() || null,
       runUnconfirmed: SkyForceSave.load().runUnconfirmed,
+      hostagesRescued: this.hostages.rescuedCount,
+      hostagesTotal: this.hostages.totalSpawned,
     });
   }
 
@@ -337,10 +344,18 @@ class Game {
   }
 
   _addScore(basePoints) {
+    const prevCombo = this.combo;
     this.combo = Math.min(10, this.combo + 0.15);
     this.comboTimer = this.comboDecaySec;
     const points = Math.round(basePoints * this.combo);
     this.score += points;
+    if (prevCombo < 2 && this.combo >= 2) {
+      this.callbacks.onNiceFeedback?.('NICE');
+    } else if (prevCombo < 4 && this.combo >= 4) {
+      this.callbacks.onNiceFeedback?.('GREAT');
+    } else if (prevCombo < 6 && this.combo >= 6) {
+      this.callbacks.onNiceFeedback?.('EXCELLENT');
+    }
     return points;
   }
 
@@ -472,6 +487,8 @@ class Game {
     const x = d.x;
     const y = d.y;
     this.screenShake = Math.max(this.screenShake, 0.25);
+    this.fx.starShower(x, y);
+    this.fx.burst(x, y, { count: 18, speed: 140, color: '#fb923c', life: 0.5 });
     this._addScore(d.type === 'radar' || d.type === 'fuel' ? 400 : 120);
 
     if (d.dropProfile === 'crate') {
@@ -481,13 +498,13 @@ class Game {
         if (Math.random() < 0.4) this.powerups.spawn(x + 20, y + 8, 'shield');
       }
       for (let i = 0; i < 3; i += 1) {
-        this.stars.spawn(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 20, 12);
+        this.stars.spawn(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 20, 14);
       }
       this._tryLootDrop(x, y, 'crate');
     } else {
-      for (let i = 0; i < 14; i += 1) {
-        const angle = (i / 14) * Math.PI * 2;
-        this.stars.spawn(x + Math.cos(angle) * 24, y + Math.sin(angle) * 24, 22);
+      for (let i = 0; i < 18; i += 1) {
+        const angle = (i / 18) * Math.PI * 2;
+        this.stars.spawn(x + Math.cos(angle) * 28, y + Math.sin(angle) * 28, 24);
       }
       this._tryLootDrop(x, y, 'radar');
     }
@@ -598,9 +615,20 @@ class Game {
           else this.bullets.playerPool.release(bullet);
           if (enemy.takeDamage(bullet.damage)) {
             this._addScore(enemy.points);
+            this.fx.hitSpark(enemy.x, enemy.y);
+            if (enemy.type === 'tank' || enemy.elite) {
+              this.fx.burst(enemy.x, enemy.y, { count: 14, speed: 130, color: '#f97316', life: 0.4 });
+            }
             if (this.mode === 'arcade') this.enemyKillsThisWave += 1;
             this.stageDirector?.onEnemyKilled();
-            this.stars.spawn(enemy.x, enemy.y, 10 + Math.floor(enemy.points / 50));
+            const starVal = 12 + Math.floor(enemy.points / 40);
+            for (let s = 0; s < (enemy.elite ? 4 : 2); s += 1) {
+              this.stars.spawn(
+                enemy.x + (Math.random() - 0.5) * 24,
+                enemy.y + (Math.random() - 0.5) * 16,
+                starVal,
+              );
+            }
             this.screenShake = 0.12;
             if (enemy.elite) this._tryLootDrop(enemy.x, enemy.y, 'elite');
             if (Math.random() < enemy.dropChance) {
@@ -725,6 +753,7 @@ class Game {
     this.hostages.draw(ctx);
     if (this.boss?.alive) this.boss.draw(ctx);
     this.bullets.draw(ctx);
+    this.fx.draw(ctx);
     this.runLoot.draw(ctx);
     this.player.draw(ctx);
     if (this.mode === 'stage') this._drawCheckpointMarker(ctx);
