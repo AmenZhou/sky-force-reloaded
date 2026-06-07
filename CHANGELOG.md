@@ -6,6 +6,17 @@
 - Fix: stop previous game loop on retry (prevent duplicate rAF loops)
 - Fix: replace `roundRect` with `rect` for broader browser support
 
+## 0.3.1 — 2026-06-07
+
+- Fix: runStars now banks star entity value (÷10), not +1 per pickup
+- Balance: wave-scaled enemy bullet damage/speed; hull ram 25→18
+- Agent: bullet-aware dodge + pickup seeking; richer getState snapshot
+
+## 0.3.0 — 2026-06-06
+
+- UI: vivid cosmic HUD, hit feedback, enemy silhouettes, Playwright agent
+- Fix: time dilation touch-only (keyboard stays full speed)
+
 ## 0.2.0 — 2026-06-06
 
 - Input: relative touch delta, always-on auto-fire, time dilation (25% on idle 100ms)

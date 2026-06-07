@@ -173,7 +173,7 @@ class EnemyManager {
     }
   }
 
-  tryFire(bulletPool, player, dt) {
+  tryFire(bulletPool, player, dt, wave = 1) {
     for (const e of this.list) {
       if (!e.alive || e.fireRate <= 0 || e.fireTimer > 0) continue;
       if (e.y < 40 || e.y > this.h * 0.65) continue;
@@ -181,8 +181,9 @@ class EnemyManager {
       const dx = player.x - e.x;
       const dy = player.y - e.y;
       const len = Math.hypot(dx, dy) || 1;
-      const speed = Math.min(220, 180);
-      bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed, 6);
+      const speed = Math.min(205, 172 + wave * 2);
+      const damage = 6 + Math.max(0, wave - 2);
+      bulletPool.spawnEnemyBullet(e.x, e.y + e.radius, (dx / len) * speed, (dy / len) * speed, damage);
     }
   }
 

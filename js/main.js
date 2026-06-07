@@ -170,16 +170,30 @@ btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
 
 window.__SKY_FORCE__ = {
-  getState: () => (game ? {
-    running: game.running,
-    score: game.score,
-    runStars: game.runStars,
-    wave: game.wave,
-    lives: game.lives,
-    maxLives: game.maxLives,
-    shieldPct: Math.round(game.player.shieldPct * 100),
-    weaponLevel: game.player.weaponLevel,
-    combo: game.combo,
-    timeScale: game.timeScale,
-  } : null),
+  getState: () => {
+    if (!game) return null;
+    return {
+      running: game.running,
+      score: game.score,
+      runStars: game.runStars,
+      wave: game.wave,
+      lives: game.lives,
+      maxLives: game.maxLives,
+      shieldPct: Math.round(game.player.shieldPct * 100),
+      weaponLevel: game.player.weaponLevel,
+      combo: game.combo,
+      timeScale: game.timeScale,
+      playerX: game.player.x,
+      playerY: game.player.y,
+      enemyBullets: game.bullets.enemyBullets.map((b) => ({
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        vx: Math.round(b.vx),
+        vy: Math.round(b.vy),
+      })),
+      powerups: game.powerups.list
+        .filter((p) => p.active)
+        .map((p) => ({ x: Math.round(p.x), y: Math.round(p.y), type: p.type })),
+    };
+  },
 };

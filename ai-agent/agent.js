@@ -40,11 +40,87 @@ class Logger {
   }
 }
 
+function nearestPickup(state, type) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const p of state.powerups || []) {
+    if (type && p.type !== type) continue;
+    const d = Math.hypot(p.x - state.playerX, p.y - state.playerY);
+    if (d < bestDist) {
+      bestDist = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+function moveToward(px, py, tx, ty) {
+  const dx = tx - px;
+  const dy = ty - py;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? 'move_right' : 'move_left';
+  }
+  return dy > 0 ? 'move_down' : 'move_up';
+}
+
+function bulletThreat(state) {
+  let left = 0;
+  let right = 0;
+  let up = 0;
+  let down = 0;
+  for (const b of state.enemyBullets || []) {
+    if (b.vy <= 0) continue;
+    const ahead = b.y > state.playerY - 120 && b.y < state.playerY + 40;
+    if (!ahead) continue;
+    const nearX = Math.abs(b.x - state.playerX) < 70;
+    if (!nearX) continue;
+    if (b.x < state.playerX) left += 1;
+    else right += 1;
+    if (b.y < state.playerY) up += 1;
+    else down += 1;
+  }
+  return { left, right, up, down };
+}
+
 function pickMove(state, turn) {
-  if (!state || !state.running) return 'wait';
-  const { timeScale, shieldPct } = state;
-  if (timeScale < 1) return 'hold_slowmo';
-  if (shieldPct < 40) return turn % 2 === 0 ? 'move_left' : 'move_right';
+  if (!state?.running) return 'wait';
+  if (state.timeScale < 1) return 'hold_slowmo';
+
+  const bullets = state.enemyBullets || [];
+  const threat = bulletThreat(state);
+
+  if (bullets.length > 12) {
+    if (state.playerX > 210) return 'move_left';
+    if (state.playerX < 150) return 'move_right';
+    if (state.playerY > 520) return 'move_up';
+    return moveToward(state.playerX, state.playerY, 180, 560);
+  }
+
+  if (state.shieldPct < 55) {
+    const shield = nearestPickup(state, 'shield');
+    if (shield && Math.hypot(shield.x - state.playerX, shield.y - state.playerY) < 140) {
+      return moveToward(state.playerX, state.playerY, shield.x, shield.y);
+    }
+  }
+
+  if (state.weaponLevel < 3) {
+    const weapon = nearestPickup(state, 'weapon');
+    if (weapon && Math.hypot(weapon.x - state.playerX, weapon.y - state.playerY) < 120) {
+      return moveToward(state.playerX, state.playerY, weapon.x, weapon.y);
+    }
+  }
+
+  if (threat.left + threat.right > 0) {
+    if (threat.left > threat.right) return 'move_right';
+    if (threat.right > threat.left) return 'move_left';
+    if (threat.up > threat.down) return 'move_down';
+    return 'move_up';
+  }
+
+  if (state.shieldPct < 40) {
+    return turn % 2 === 0 ? 'move_left' : 'move_right';
+  }
+
   const cycle = ['move_left', 'move_right', 'move_up', 'move_down'];
   return cycle[turn % cycle.length];
 }
@@ -92,10 +168,12 @@ async function main() {
   let lastShield = 100;
   let hits = 0;
   let slowTicks = 0;
+  let turnsCompleted = 0;
 
   for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
     const state = await readState(page);
     if (!state?.running) break;
+    turnsCompleted = turn;
 
     if (state.shieldPct < lastShield - 1) hits += 1;
     if (state.timeScale < 1) slowTicks += 1;
@@ -113,6 +191,7 @@ async function main() {
       weaponLevel: state.weaponLevel,
       combo: state.combo,
       timeScale: state.timeScale,
+      enemyBullets: (state.enemyBullets || []).length,
     });
 
     const action = pickMove(state, turn);
@@ -124,10 +203,11 @@ async function main() {
   const final = await readState(page);
   logger.write({
     type: 'session_end',
-    turns: MAX_TURNS,
+    turns: turnsCompleted,
     finalScore: final?.score ?? lastScore,
     finalWave: final?.wave ?? 0,
     finalLives: final?.lives ?? 0,
+    finalRunStars: final?.runStars ?? 0,
     hitsTaken: hits,
     slowMoTicks: slowTicks,
     running: final?.running ?? false,
@@ -136,7 +216,7 @@ async function main() {
   await logger.close();
   await browser.close();
 
-  console.log(`[done] score=${final?.score ?? lastScore} wave=${final?.wave} hits=${hits} slowTicks=${slowTicks}`);
+  console.log(`[done] score=${final?.score ?? lastScore} wave=${final?.wave} stars=${final?.runStars} hits=${hits} slowTicks=${slowTicks}`);
   console.log(`[log] ${logger.logPath}`);
 }
 

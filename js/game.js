@@ -156,7 +156,7 @@ class Game {
 
     this.bullets.update(dt, this.canvas.width, this.canvas.height);
     this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
-    this.enemies.tryFire(this.bullets, this.player, dt);
+    this.enemies.tryFire(this.bullets, this.player, dt, this.wave);
     this.powerups.update(dt, this.scrollSpeed * 0.5);
     this.stars.update(dt, this.scrollSpeed * 0.5);
 
@@ -239,8 +239,8 @@ class Game {
     for (const enemy of this.enemies.list) {
       if (!enemy.alive) continue;
       if (this._hit(enemy, this.player, 0.85, true)) {
-        const lostLife = this.player.takeDamage(25);
-        this._notifyHit(25, lostLife);
+        const lostLife = this.player.takeDamage(18);
+        this._notifyHit(18, lostLife);
         if (lostLife) this._onPlayerDeath();
         enemy.alive = false;
       }
@@ -259,7 +259,7 @@ class Game {
       if (!star.active) continue;
       if (this._hit(star, this.player, 1.4, true)) {
         star.active = false;
-        this.runStars += 1;
+        this.runStars += Math.max(1, Math.round(star.value / 10));
         this._addScore(star.value);
       }
     }
