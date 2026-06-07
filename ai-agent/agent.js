@@ -112,6 +112,8 @@ async function main() {
   let hits = 0;
   let slowTicks = 0;
   let turnsCompleted = 0;
+  let lastAction = null;
+  let sameActionStreak = 0;
 
   for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
     const state = await readState(page);
@@ -138,8 +140,12 @@ async function main() {
     });
 
     const action = USE_HEURISTIC
-      ? pickHeuristicMove(state, turn, config)
+      ? pickHeuristicMove(state, turn, config, { lastAction, sameActionStreak })
       : await pickLLMMove(state, turn, llm, logger);
+
+    if (action === lastAction) sameActionStreak += 1;
+    else sameActionStreak = 1;
+    lastAction = action;
 
     logger.write({ type: 'action', turn, action });
     await applyAction(page, action, TICK_MS);

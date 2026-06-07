@@ -27,37 +27,83 @@ function moveToward(px, py, tx, ty) {
   return dy > 0 ? 'move_down' : 'move_up';
 }
 
-function bulletThreat(state, cfg) {
-  let left = 0;
-  let right = 0;
-  let up = 0;
-  let down = 0;
+function weightedBulletDodge(state, cfg) {
+  const scores = { left: 0, right: 0, up: 0, down: 0 };
   for (const b of state.enemyBullets || []) {
-    if (b.vy <= 0) continue;
-    const ahead = b.y > state.playerY - cfg.threatAheadYTop
-      && b.y < state.playerY + cfg.threatAheadYBottom;
-    if (!ahead) continue;
-    if (Math.abs(b.x - state.playerX) >= cfg.threatNearX) continue;
-    if (b.x < state.playerX) left += 1;
-    else right += 1;
-    if (b.y < state.playerY) up += 1;
-    else down += 1;
+    if (b.vy <= 40) continue;
+    const dx = b.x - state.playerX;
+    const dy = b.y - state.playerY;
+    if (dy > cfg.threatAheadYBottom || dy < -cfg.threatAheadYTop) continue;
+    if (Math.abs(dx) > cfg.threatNearX + 25) continue;
+    const w = 1 / (Math.abs(dx) + Math.abs(dy) * 0.35 + 8);
+    if (dx <= 0) scores.right += w;
+    else scores.left += w;
+    if (dy <= 0) scores.down += w * 0.5;
+    else scores.up += w * 0.5;
   }
-  return { left, right, up, down };
+  let best = null;
+  let bestScore = 0.08;
+  for (const [dir, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      best = dir;
+    }
+  }
+  if (!best) return null;
+  return `move_${best}`;
 }
 
-export function pickHeuristicMove(state, turn, cfg) {
+function nearestEnemyThreat(state) {
+  let worst = null;
+  let worstGap = Infinity;
+  for (const e of state.enemies || []) {
+    const dx = e.x - state.playerX;
+    const dy = e.y - state.playerY;
+    if (dy < -90 || dy > 70) continue;
+    const gap = Math.hypot(dx, dy) - (e.radius || 14);
+    if (gap < worstGap) {
+      worstGap = gap;
+      worst = { dx, gap };
+    }
+  }
+  return worst && worst.gap < 50 ? worst : null;
+}
+
+function avoidRepeat(action, lastAction, streak, turn) {
+  if (streak < 3 || action !== lastAction) return action;
+  const cycle = ['move_left', 'move_right', 'move_up', 'move_down'];
+  const alts = cycle.filter((a) => a !== lastAction);
+  return alts[turn % alts.length];
+}
+
+export function pickHeuristicMove(state, turn, cfg, context = {}) {
+  const { lastAction = null, sameActionStreak = 0 } = context;
   if (!state?.running) return 'wait';
   if (state.timeScale < 1) return 'hold_slowmo';
 
   const bullets = state.enemyBullets || [];
-  const threat = bulletThreat(state, cfg);
+  const weaponRange = state.wave >= 2
+    ? cfg.weaponPickupRange + 40
+    : cfg.weaponPickupRange;
 
   if (bullets.length > cfg.bulletHellThreshold) {
-    if (state.playerX > cfg.safeZoneXMax) return 'move_left';
-    if (state.playerX < cfg.safeZoneXMin) return 'move_right';
-    if (state.playerY > cfg.safeZoneYMax) return 'move_up';
-    return moveToward(state.playerX, state.playerY, cfg.safeAnchorX, cfg.safeAnchorY);
+    let action;
+    if (state.playerX > cfg.safeZoneXMax) action = 'move_left';
+    else if (state.playerX < cfg.safeZoneXMin) action = 'move_right';
+    else if (state.playerY > cfg.safeZoneYMax) action = 'move_up';
+    else action = moveToward(state.playerX, state.playerY, cfg.safeAnchorX, cfg.safeAnchorY);
+    return avoidRepeat(action, lastAction, sameActionStreak, turn);
+  }
+
+  const enemyThreat = nearestEnemyThreat(state);
+  if (enemyThreat) {
+    const action = enemyThreat.dx > 0 ? 'move_left' : 'move_right';
+    return avoidRepeat(action, lastAction, sameActionStreak, turn);
+  }
+
+  const dodge = weightedBulletDodge(state, cfg);
+  if (dodge) {
+    return avoidRepeat(dodge, lastAction, sameActionStreak, turn);
   }
 
   if (state.shieldPct < cfg.shieldSeekPct) {
@@ -69,22 +115,17 @@ export function pickHeuristicMove(state, turn, cfg) {
 
   if (state.weaponLevel < cfg.weaponSeekLevel) {
     const weapon = nearestPickup(state, 'weapon');
-    if (weapon && Math.hypot(weapon.x - state.playerX, weapon.y - state.playerY) < cfg.weaponPickupRange) {
+    if (weapon && Math.hypot(weapon.x - state.playerX, weapon.y - state.playerY) < weaponRange) {
       return moveToward(state.playerX, state.playerY, weapon.x, weapon.y);
     }
   }
 
-  if (threat.left + threat.right > 0) {
-    if (threat.left > threat.right) return 'move_right';
-    if (threat.right > threat.left) return 'move_left';
-    if (threat.up > threat.down) return 'move_down';
-    return 'move_up';
-  }
-
   if (state.shieldPct < cfg.panicShieldPct) {
-    return turn % 2 === 0 ? 'move_left' : 'move_right';
+    const action = turn % 2 === 0 ? 'move_left' : 'move_right';
+    return avoidRepeat(action, lastAction, sameActionStreak, turn);
   }
 
   const cycle = ['move_left', 'move_right', 'move_up', 'move_down'];
-  return cycle[turn % cycle.length];
+  const action = cycle[turn % cycle.length];
+  return avoidRepeat(action, lastAction, sameActionStreak, turn);
 }

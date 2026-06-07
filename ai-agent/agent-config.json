@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "tuningGeneration": 1,
+  "tuningGeneration": 2,
   "bulletHellThreshold": 12,
   "safeZoneXMin": 150,
   "safeZoneXMax": 210,
@@ -13,12 +13,12 @@
   "weaponPickupRange": 150,
   "threatAheadYTop": 120,
   "threatAheadYBottom": 40,
-  "threatNearX": 75,
+  "threatNearX": 76,
   "panicShieldPct": 40,
   "targets": {
     "minWave": 3,
     "maxHitsPer80Turns": 12,
     "minScore": 8000
   },
-  "lastTunedFrom": "run-2026-06-07T00-39-32.jsonl"
+  "lastTunedFrom": "run-2026-06-07T00-45-55.jsonl"
 }

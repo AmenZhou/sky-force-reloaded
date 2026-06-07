@@ -35,7 +35,17 @@ export function tuneFromMetrics(cfg, metrics) {
     notes.push('bullet hell → widen safe lane');
   }
 
-  if (notes.length === 0) {
+  if (
+    notes.length === 0
+    && metrics.finalWave >= 6
+    && metrics.hitsTaken <= t.maxHitsPer80Turns
+    && metrics.finalScore >= t.minScore * 5
+  ) {
+    next.targets.minWave = Math.min(t.minWave + 1, 8);
+    next.targets.minScore = Math.round(t.minScore * 1.5);
+    next.targets.maxHitsPer80Turns = Math.max(4, t.maxHitsPer80Turns - 2);
+    notes.push('targets crushed → raise bar for next generation');
+  } else if (notes.length === 0) {
     notes.push('targets met — minor exploration bump');
     next.threatNearX = clamp(next.threatNearX + 1, 40, 120);
   }

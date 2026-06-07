@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3 — 2026-06-07
+
+- Agent: velocity-weighted bullet dodge, enemy ram avoidance, anti-spam streak breaker
+- Agent: expose live enemy positions in `getState()` for heuristic steering
+- Agent: progressive target raising when metrics crush current goals (tuner gen 2)
+
 ## 0.1.1 — 2026-06-06
 
 - Fix: switch from ES modules to classic scripts so the game runs via `file://` (double-click HTML)

@@ -191,6 +191,14 @@ window.__SKY_FORCE__ = {
         vx: Math.round(b.vx),
         vy: Math.round(b.vy),
       })),
+      enemies: game.enemies.list
+        .filter((e) => e.alive)
+        .map((e) => ({
+          x: Math.round(e.x),
+          y: Math.round(e.y),
+          radius: e.radius,
+          type: e.type,
+        })),
       powerups: game.powerups.list
         .filter((p) => p.active)
         .map((p) => ({ x: Math.round(p.x), y: Math.round(p.y), type: p.type })),
