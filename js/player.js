@@ -12,6 +12,7 @@ class Player {
     this.weaponLevel = 1;
     this.fireTimer = 0;
     this.invuln = 0;
+    this.hitFlash = 0;
   }
 
   get shieldPct() {
@@ -24,6 +25,7 @@ class Player {
     this.shield = this.maxShield;
     this.weaponLevel = 1;
     this.invuln = 2;
+    this.hitFlash = 0;
   }
 
   moveByAxes(ax, ay, dt, w, h) {
@@ -61,6 +63,8 @@ class Player {
   takeDamage(amount) {
     if (this.invuln > 0) return false;
     this.shield -= amount;
+    this.hitFlash = 0.45;
+    this.invuln = 1.5;
     if (this.shield <= 0) {
       this.shield = 0;
       return true;
@@ -72,9 +76,15 @@ class Player {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    if (this.invuln > 0) {
-      this.invuln -= 0.016;
+    if (this.hitFlash > 0) {
+      ctx.globalAlpha = 0.35 + Math.sin(Date.now() * 0.04) * 0.25;
+    } else if (this.invuln > 0) {
       ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+    }
+
+    if (this.hitFlash > 0) {
+      ctx.shadowColor = '#fb7185';
+      ctx.shadowBlur = 18;
     }
 
     const grad = ctx.createRadialGradient(0, 8, 0, 0, 8, 22);
@@ -103,13 +113,20 @@ class Player {
     ctx.fill();
 
     if (this.shield > 0) {
-      ctx.strokeStyle = `rgba(52, 211, 153, ${0.25 + this.shieldPct * 0.5})`;
-      ctx.lineWidth = 2;
+      const shieldHue = this.shieldPct > 0.5 ? '52, 211, 153' : this.shieldPct > 0.25 ? '251, 191, 36' : '251, 113, 133';
+      ctx.strokeStyle = `rgba(${shieldHue}, ${0.35 + this.shieldPct * 0.55})`;
+      ctx.lineWidth = this.hitFlash > 0 ? 3 : 2;
       ctx.beginPath();
       ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
       ctx.stroke();
     }
 
+    ctx.shadowBlur = 0;
     ctx.restore();
+  }
+
+  tick(dt) {
+    if (this.invuln > 0) this.invuln -= dt;
+    if (this.hitFlash > 0) this.hitFlash -= dt;
   }
 }

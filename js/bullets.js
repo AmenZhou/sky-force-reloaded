@@ -68,12 +68,19 @@ class BulletPool {
       ctx.fill();
     });
     this.enemyPool.forEachActive((b) => {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * 0.45, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = b.color;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
     ctx.shadowBlur = 0;
   }

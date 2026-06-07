@@ -22,6 +22,9 @@ class Game {
     this.dilationScale = 0.25;
     this.bossActive = false;
     this.bossHpPct = 100;
+    this.hitFlash = 0;
+    this.screenShake = 0;
+    this.maxLives = 3;
 
     this.background = new Background(canvas.width, canvas.height);
     this.player = new Player(canvas.width / 2, canvas.height - 80);
@@ -35,6 +38,7 @@ class Game {
       lastX: canvas.width / 2,
       lastY: canvas.height - 80,
     };
+    this.pointerEverUsed = false;
 
     this._bindInput();
   }
@@ -60,6 +64,7 @@ class Game {
 
     this.canvas.addEventListener('pointerdown', (e) => {
       this.pointer.active = true;
+      this.pointerEverUsed = true;
       const p = toCanvas(e.clientX, e.clientY);
       this.pointer.lastX = p.x;
       this.pointer.lastY = p.y;
@@ -90,6 +95,11 @@ class Game {
   }
 
   _updateTimeScale(dt) {
+    if (!this.pointerEverUsed) {
+      this.timeScale = 1;
+      this.idleTimer = 0;
+      return;
+    }
     if (this.pointer.active || this._movementKeysHeld()) {
       this.idleTimer = 0;
       this.timeScale = 1;
@@ -142,6 +152,7 @@ class Game {
     }
 
     this.player.fire(this.bullets, dt);
+    this.player.tick(rawDt);
 
     this.bullets.update(dt, this.canvas.width, this.canvas.height);
     this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
@@ -158,17 +169,33 @@ class Game {
       this.scrollSpeed += 4;
     }
 
+    if (this.hitFlash > 0) this.hitFlash -= rawDt;
+    if (this.screenShake > 0) this.screenShake -= rawDt;
+
     this.callbacks.onHudUpdate?.({
       score: this.score,
       runStars: this.runStars,
       wave: this.wave,
       lives: this.lives,
+      maxLives: this.maxLives,
       shieldPct: this.player.shieldPct * 100,
       weaponLevel: this.player.weaponLevel,
       combo: this.combo,
       timeScale: this.timeScale,
       bossActive: this.bossActive,
       bossHpPct: this.bossHpPct,
+      hitFlash: this.hitFlash,
+    });
+  }
+
+  _notifyHit(damage, lostLife) {
+    this.hitFlash = Math.max(this.hitFlash, 0.35);
+    this.screenShake = 0.2;
+    this.callbacks.onPlayerHit?.({
+      damage,
+      shieldPct: this.player.shieldPct * 100,
+      lives: this.lives,
+      lostLife,
     });
   }
 
@@ -203,18 +230,18 @@ class Game {
       if (!eb.active) continue;
       if (this._hit(eb, this.player, 1, true)) {
         this.bullets.enemyPool.release(eb);
-        if (this.player.takeDamage(eb.damage)) {
-          this._onPlayerDeath();
-        }
+        const lostLife = this.player.takeDamage(eb.damage);
+        this._notifyHit(eb.damage, lostLife);
+        if (lostLife) this._onPlayerDeath();
       }
     }
 
     for (const enemy of this.enemies.list) {
       if (!enemy.alive) continue;
       if (this._hit(enemy, this.player, 0.85, true)) {
-        if (this.player.takeDamage(25)) {
-          this._onPlayerDeath();
-        }
+        const lostLife = this.player.takeDamage(25);
+        this._notifyHit(25, lostLife);
+        if (lostLife) this._onPlayerDeath();
         enemy.alive = false;
       }
     }
@@ -264,6 +291,11 @@ class Game {
 
   draw() {
     const { ctx, canvas } = this;
+    ctx.save();
+    if (this.screenShake > 0) {
+      const s = this.screenShake * 6;
+      ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.background.draw(ctx);
     this.stars.draw(ctx);
@@ -271,5 +303,10 @@ class Game {
     this.enemies.draw(ctx);
     this.bullets.draw(ctx);
     this.player.draw(ctx);
+    if (this.hitFlash > 0) {
+      ctx.fillStyle = `rgba(244, 63, 94, ${this.hitFlash * 0.35})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.restore();
   }
 }

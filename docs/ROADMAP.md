@@ -74,10 +74,11 @@ Phased delivery from current **v0.1 scaffold** to playable **campaign MVP**.
 | Task | Acceptance criteria |
 |------|---------------------|
 | Hangar UI | Spend stars: HP, cannon, magnet (3 modules) |
-| Upgrades affect run | HP/shield max, starting weapon level |
+| Economy JSON | `data/economy/hangar.json` per [[ECONOMY-SPEC]] |
+| Upgrades affect run | HP/shield max, starting weapon level, magnet radius |
 | Upgrade persistence | Survives refresh via localStorage |
 
-**Done when:** Player must replay Stage 1 to farm stars before beating Stage 2 on first account.
+**Done when:** Player must replay Stage 1 **8–12 times** before comfortably beating Stage 2 on fresh account (~29.5k★ to max all MVP modules; magnet unlock at 2,000★ around clear #2).
 
 ---
 
@@ -116,12 +117,26 @@ Phased delivery from current **v0.1 scaffold** to playable **campaign MVP**.
 
 ---
 
+## Phase 8 — Depth mechanics (v0.9–v1.2)
+
+**Goal:** Break “hold finger, things explode” monotony with risk/reward layers.
+
+| Version | Deliverable | Doc |
+|---------|-------------|-----|
+| v0.9 | Chain break on enemy escape; 1 technician (Slo-Mo Chan); loadout screen | [[MECHANICS-DEPTH]] |
+| v1.0 | Escort crate + EMP gimmick stage; 2 ships; wing cannon hangar module | [[ECONOMY-SPEC]] |
+| v1.0 | Modular boss (wings → core) on Stage 2 | [[MECHANICS-DEPTH#4]] |
+| v1.1 | Darkness stage + wreckage retrieval (local seeded) | [[MECHANICS-DEPTH#1.2]] |
+| v1.2 | Full technician roster; online leaderboard for wreckage | — |
+
+---
+
 ## Stretch (v1.0+)
 
 - Manual power-ups: bomb, laser, energy shield
-- Second ship unlock
-- Endless leaderboard (local)
+- Endless leaderboard (local → online)
 - Capacitor iOS wrapper
+- Card collection meta (permanent passives from crates)
 
 ---
 

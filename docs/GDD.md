@@ -58,7 +58,10 @@ flowchart LR
 | Hangar | 10-tier upgrades per module | — | HP, cannon, wings, magnet, missiles |
 | Medals | 4 objectives per stage | — | No-hit, rescue all, time, score |
 | Difficulty | Normal → Premium → Nightmare | Single curve | Difficulty multiplier on enemy HP/fire |
-| Technicians / Cards | Meta modifiers | — | v1.0+ |
+| Technicians / Cards | Meta modifiers | — | v0.9–v1.0 ([[MECHANICS-DEPTH]]) |
+| Escort crate / wreckage | Rogue-lite mid-level events | — | v1.0+ |
+| Gimmick stages (EMP, darkness) | Pacing breaks | — | v1.0–v1.1 |
+| Modular bosses | Part destruction order | Single HP bar | v0.5 → v0.9 parts |
 | Co-op | Local 2P | — | Out of scope |
 
 Sources: [Sky Force Reloaded Wiki](https://sky-force-reloaded-2016.fandom.com/wiki/Sky_Force_Reloaded), [EGM review](https://egmnow.com/sky-force-reloaded-review/).
@@ -129,7 +132,9 @@ Each stage ends with a **multi-phase boss**:
 2. **Phase B:** 50% HP — faster patterns + adds
 3. **Phase C:** 25% HP — enrage (screen fill danger zones)
 
-**MVP boss:** Single large entity, 2 phases, weak points optional in v0.5.
+**MVP boss (v0.5):** Single large entity, 2 phases.
+
+**Modular boss (v0.9+):** Destroy wing cannons → crack armor plate → expose core; orbital railgun with aim-laser telegraph. See [[MECHANICS-DEPTH#4 Multi-Part Flanking Bosses]].
 
 ---
 
@@ -150,6 +155,20 @@ Each stage ends with a **multi-phase boss**:
 - Stars banked at stage end (lost on mid-stage quit)
 - Hangar upgrade tree (10 blocks per module, shared across ships)
 - Priority unlock order: **HP → Main cannon → Magnet → Wing cannons → Missiles**
+- **Cost formula & pacing:** see **`docs/ECONOMY-SPEC.md`** (heavy-grind profile: ~29.5k★ MVP max ≈16 clears, ~102k★ full hangar ≈54 clears, ~1.9k★ per average Stage 1 clear)
+
+### 6.3 Risk/reward layers (v0.9+)
+
+Full spec: **`docs/MECHANICS-DEPTH.md`**
+
+| Layer | Hook |
+|-------|------|
+| Escort crate | Magnet heavy cargo through bullet hell → permanent card |
+| Wreckage rescue | Hover on leaderboard death spot → 500★ burst |
+| Technicians | Slo-Mo Chan, Kate Brush, Holo Granny — rule changes, not just stats |
+| Gimmick stages | EMP (no guns), darkness (headlamp only) |
+| Modular bosses | Wings → plate → core; aim-laser telegraph |
+| Chain break | Escaping enemy resets combo — forces aggressive pursuit |
 
 ---
 
@@ -158,7 +177,7 @@ Each stage ends with a **multi-phase boss**:
 ### Score
 
 - Enemy kill points × combo multiplier
-- Combo decays after 3s without kill
+- Combo decays after 3s without kill; **resets instantly** if an enemy escapes the screen undamaged (see [[MECHANICS-DEPTH#5.2 Multiplier chain]])
 - Stage clear bonus + unused lives bonus
 
 ### Medals (stretch, per stage)
@@ -238,12 +257,14 @@ Full screen map, tokens, and wireframes: **`docs/UI-SPEC.md`**
 
 ---
 
-## 12. Out of Scope (v1.0)
+## 12. Out of Scope (v1.0 MVP)
 
-- Online tournaments / leaderboards
+- Online tournaments
 - Local co-op
-- 9 planes + card/technician meta
+- All 9 planes (ship roster is v1.0 stretch, not day-one)
 - Native mobile wrapper (Capacitor) — consider post-web polish
+
+**In scope post-MVP (v0.9–v1.2):** technicians, escort crates, gimmick stages, async wreckage — see [[MECHANICS-DEPTH]] and [[ROADMAP]].
 
 ---
 

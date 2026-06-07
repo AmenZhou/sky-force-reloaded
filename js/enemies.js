@@ -1,7 +1,40 @@
 const TYPES = {
-  scout: { hp: 12, radius: 12, speed: 90, points: 100, color: '#f97316', dropChance: 0.12, dropType: 'weapon', fireRate: 0 },
-  fighter: { hp: 28, radius: 16, speed: 70, points: 250, color: '#a855f7', dropChance: 0.18, dropType: 'shield', fireRate: 1.8 },
-  tank: { hp: 55, radius: 22, speed: 45, points: 500, color: '#ef4444', dropChance: 0.25, dropType: 'weapon', fireRate: 2.4 },
+  scout: {
+    hp: 12,
+    radius: 10,
+    speed: 90,
+    points: 100,
+    color: '#fb923c',
+    accent: '#fde047',
+    dropChance: 0.12,
+    dropType: 'weapon',
+    fireRate: 0,
+    label: 'SCOUT',
+  },
+  fighter: {
+    hp: 28,
+    radius: 15,
+    speed: 70,
+    points: 250,
+    color: '#a855f7',
+    accent: '#22d3ee',
+    dropChance: 0.18,
+    dropType: 'shield',
+    fireRate: 1.8,
+    label: 'FIGHTER',
+  },
+  tank: {
+    hp: 55,
+    radius: 22,
+    speed: 45,
+    points: 500,
+    color: '#ef4444',
+    accent: '#78716c',
+    dropChance: 0.25,
+    dropType: 'weapon',
+    fireRate: 2.4,
+    label: 'TANK',
+  },
 };
 
 function makeEnemy(typeKey, x, y, wave) {
@@ -16,6 +49,8 @@ function makeEnemy(typeKey, x, y, wave) {
     speed: t.speed + wave * 3,
     points: t.points,
     color: t.color,
+    accent: t.accent,
+    label: t.label,
     dropChance: t.dropChance,
     dropType: t.dropType,
     fireRate: t.fireRate,
@@ -31,6 +66,65 @@ function makeEnemy(typeKey, x, y, wave) {
       return false;
     },
   };
+}
+
+function drawScout(ctx, e) {
+  ctx.fillStyle = e.color;
+  ctx.strokeStyle = e.accent;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, e.radius);
+  ctx.lineTo(e.radius * 0.55, -e.radius * 0.2);
+  ctx.lineTo(0, -e.radius * 0.85);
+  ctx.lineTo(-e.radius * 0.55, -e.radius * 0.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = e.accent;
+  ctx.fillRect(-e.radius * 0.9, -e.radius * 0.15, e.radius * 0.35, 3);
+  ctx.fillRect(e.radius * 0.55, -e.radius * 0.15, e.radius * 0.35, 3);
+}
+
+function drawFighter(ctx, e) {
+  ctx.fillStyle = '#1e1b4b';
+  ctx.fillRect(-e.radius * 0.35, -e.radius * 0.5, e.radius * 0.7, e.radius * 1.1);
+  ctx.fillStyle = e.color;
+  ctx.beginPath();
+  ctx.moveTo(0, e.radius);
+  ctx.lineTo(e.radius * 0.95, -e.radius * 0.35);
+  ctx.lineTo(0, -e.radius * 0.75);
+  ctx.lineTo(-e.radius * 0.95, -e.radius * 0.35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = e.accent;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = e.accent;
+  ctx.beginPath();
+  ctx.arc(-e.radius * 0.55, e.radius * 0.15, 3, 0, Math.PI * 2);
+  ctx.arc(e.radius * 0.55, e.radius * 0.15, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f0abfc';
+  ctx.fillRect(-e.radius * 1.05, -e.radius * 0.1, e.radius * 0.45, 4);
+  ctx.fillRect(e.radius * 0.6, -e.radius * 0.1, e.radius * 0.45, 4);
+}
+
+function drawTank(ctx, e) {
+  const w = e.radius * 1.1;
+  const h = e.radius * 0.65;
+  ctx.fillStyle = e.accent;
+  ctx.fillRect(-w, -h * 0.2, w * 2, h * 1.4);
+  ctx.fillStyle = e.color;
+  ctx.fillRect(-w * 0.85, -h, w * 1.7, h * 1.2);
+  ctx.strokeStyle = '#450a0a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-w * 0.85, -h, w * 1.7, h * 1.2);
+  ctx.fillStyle = '#fca5a5';
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.55, h * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#7f1d1d';
+  ctx.fillRect(-3, -h * 1.2, 6, h * 0.5);
 }
 
 class EnemyManager {
@@ -101,28 +195,30 @@ class EnemyManager {
       if (!e.alive) continue;
       ctx.save();
       ctx.translate(e.x, e.y);
-      ctx.fillStyle = e.color;
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      if (e.type === 'tank') {
-        const rw = e.radius;
-        const rh = e.radius * 0.6;
-        ctx.rect(-rw, -rh, rw * 2, rh * 1.2);
-      } else {
-        ctx.moveTo(0, e.radius);
-        ctx.lineTo(e.radius * 0.8, -e.radius);
-        ctx.lineTo(-e.radius * 0.8, -e.radius);
-        ctx.closePath();
-      }
-      ctx.fill();
-      ctx.stroke();
+
+      ctx.shadowColor = e.color;
+      ctx.shadowBlur = e.type === 'tank' ? 10 : 6;
+
+      if (e.type === 'scout') drawScout(ctx, e);
+      else if (e.type === 'fighter') drawFighter(ctx, e);
+      else drawTank(ctx, e);
+
+      ctx.shadowBlur = 0;
 
       const hpPct = e.hp / e.maxHp;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-      ctx.fillRect(-16, -e.radius - 10, 32, 4);
-      ctx.fillStyle = '#22d3ee';
-      ctx.fillRect(-16, -e.radius - 10, 32 * hpPct, 4);
+      const barW = e.type === 'tank' ? 40 : e.type === 'fighter' ? 32 : 24;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(-barW / 2, -e.radius - 14, barW, 4);
+      ctx.fillStyle = e.type === 'tank' ? '#f87171' : e.type === 'fighter' ? '#c084fc' : '#fdba74';
+      ctx.fillRect(-barW / 2, -e.radius - 14, barW * hpPct, 4);
+
+      if (e.type !== 'scout') {
+        ctx.font = 'bold 7px Rajdhani, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.textAlign = 'center';
+        ctx.fillText(e.label, 0, -e.radius - 18);
+      }
+
       ctx.restore();
     }
   }

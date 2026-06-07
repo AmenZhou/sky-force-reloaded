@@ -1,0 +1,12 @@
+{
+  "name": "sky-force-ai-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node agent.js --headless --turns 60 --tick 500",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

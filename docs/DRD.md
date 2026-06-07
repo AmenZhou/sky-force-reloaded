@@ -52,7 +52,9 @@ Without this loop, replayability collapses.
 | **Hangar** | Main cannon, wing guns, HP, magnet, power-ups — exponential cost curve | Persistent power | v0.6 |
 | **Cards / parts** | Rare mid-level drops; kept only if stage survived | Passive buffs, new ships | v1.0+ |
 
-**Economy rule:** Each upgrade tier has ~10 blocks; cost grows exponentially so full max-out requires many replays.
+**Economy rule:** Each upgrade tier has ~10 blocks; cost grows exponentially so full max-out requires many replays. **Full math:** [[ECONOMY-SPEC]] (`cost = floor(base × r^level)`, heavy-grind: MVP **29,490★** / ~16 clears, full hangar **101,595★** / ~54 clears).
+
+**Depth rule:** Features must create **risk vs reward** decisions — not uniform hold-to-shoot. See [[MECHANICS-DEPTH]] (crates, technicians, gimmick stages, chain-break combo).
 
 ---
 
@@ -75,8 +77,10 @@ All 4 medals → unlock **Hard**, then **Insane**, **Nightmare** (HP ×, bullet 
 ### Interactive objectives
 
 - **Survivors:** Hover 2s without leaving radius to rescue  
+- **Sassy hostages:** Speech bubbles; angry scramble if rescue interrupted ([[MECHANICS-DEPTH#5.1]])  
 - VIP survivors: bonus stars + score  
-- Status: v0.8+
+- **Escort crate:** Magnet to landing zone; permanent card on success (v1.0)  
+- Status: survivors v0.8; crate v1.0
 
 ### Data-driven stages
 
