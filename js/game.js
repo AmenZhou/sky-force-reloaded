@@ -14,6 +14,10 @@ class Game {
     this.fx = new FxManager();
     this.medalTracker = null;
     this.runHits = 0;
+    this.lastBannerText = '';
+    this.agentOutcome = null;
+    this.agentDeathCause = null;
+    this.sectionsReached = 1;
     this.runCharges = {};
     this.friendCheckpoint = options.friendCheckpoint ?? SkyForceSave.load().friendCheckpointScore ?? 42000;
     this.checkpointPassed = false;
@@ -24,7 +28,7 @@ class Game {
     this.runStars = 0;
     this.wave = 1;
     this.lives = 3;
-    this.scrollSpeed = 40;
+    this.scrollSpeed = 52;
     this.enemyKillsThisWave = 0;
     this.killsForNextWave = 12;
     this.combo = 1;
@@ -44,7 +48,7 @@ class Game {
     this.maxLives = 3;
 
     this.background = new Background(canvas.width, canvas.height);
-    this.player = new Player(canvas.width / 2, canvas.height - 80);
+    this.player = new Player(canvas.width / 2, canvas.height * FLIGHT_LANE.center);
     this.player.applyHangar(this.hangarStats);
     this.runCharges = {
       laser: this.hangarStats.laserCharges,
@@ -59,7 +63,7 @@ class Game {
     this.pointer = {
       active: false,
       lastX: canvas.width / 2,
-      lastY: canvas.height - 80,
+      lastY: canvas.height * FLIGHT_LANE.center,
     };
     this.pointerEverUsed = false;
 
@@ -140,12 +144,16 @@ class Game {
     this.lastTime = performance.now();
 
     if (this.mode === 'stage' && this.stageData) {
-      this.background.setTheme('terrain');
+      this.background.setTheme(this.stageData.theme || 'terrain');
       this.enemies.setSpawnPaused(true);
       this.stageDirector = new StageDirector(this.canvas.width, this.canvas.height, {
-        onBanner: (text, kind) => this.callbacks.onBanner?.(text, kind),
+        onBanner: (text, kind) => {
+          this.lastBannerText = text;
+          this.callbacks.onBanner?.(text, kind);
+        },
         onSetSection: (section) => {
           this.wave = section;
+          this.sectionsReached = Math.max(this.sectionsReached, section);
           this.callbacks.onWaveStart?.(section);
         },
         onSpawnEnemy: (type, x, y, wave, opts) => {
@@ -164,11 +172,11 @@ class Game {
         onMedalEarned: (id, text) => this.callbacks.onMedalEarned?.(id, text),
         onMedalFailed: (id) => this.callbacks.onMedalFailed?.(id),
       });
-      this.medalTracker.reset(2);
+      this.medalTracker.reset(this.stageData.hostageCount ?? 2);
       this.callbacks.onMedalHudUpdate?.(this.medalTracker.hudState());
       this.callbacks.onStageStart?.(this.stageData);
     } else {
-      this.background.setTheme('space');
+      this.background.setTheme('terrain');
     }
 
     this.rafId = requestAnimationFrame((t) => this.loop(t));
@@ -218,9 +226,9 @@ class Game {
 
     if (this.mode === 'stage' && this.stageDirector?.running) {
       this.stageDirector.update(dt);
-    } else {
-      this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
     }
+    // Always tick enemy movement/fire timers; spawnPaused blocks arcade waves in campaign.
+    this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
 
     const bulletMult = window.HANGAR_CONFIG?.difficulty?.bulletSpeed?.[this.difficulty] || 1;
     this.enemies.tryFire(this.bullets, this.player, dt, this.wave, bulletMult);
@@ -230,8 +238,8 @@ class Game {
       dt,
       this.scrollSpeed * 0.5,
       this.player,
-      this.hangarStats.magnetRadius,
-      this.hangarStats.magnetStrength,
+      Math.max(this.hangarStats.magnetRadius, 220),
+      this.hangarStats.magnetStrength * 1.4,
     );
     this.stars.update(
       dt,
@@ -360,8 +368,11 @@ class Game {
   }
 
   _spawnWaveBoss() {
-    this.boss = new WaveBoss(this.canvas.width / 2, 90, this.wave, this.canvas.width, {
+    const groundY = this.canvas.height * 0.6;
+    this.boss = new WaveBoss(this.canvas.width / 2, groundY, this.wave, this.canvas.width, {
       stageBoss: false,
+      grounded: true,
+      groundY,
     });
     this.bossActive = true;
     this.bossHpPct = 100;
@@ -371,17 +382,23 @@ class Game {
   }
 
   _spawnStageBoss(ev) {
-    this.boss = new WaveBoss(this.canvas.width / 2, 90, Math.max(3, this.wave), this.canvas.width, {
+    const groundY = this.canvas.height * 0.6;
+    this.boss = new WaveBoss(this.canvas.width / 2, groundY, Math.max(3, this.wave), this.canvas.width, {
       maxHp: ev.hp || 4200,
       name: ev.name || 'DEBRIS CORE',
       stageBoss: true,
-      fireScale: 1.1,
+      grounded: true,
+      groundY,
+      fireScale: ev.fireScale ?? 1.1,
+      radius: ev.radius,
+      bossType: ev.type || 'debris-core',
     });
     this.bossActive = true;
     this.bossHpPct = 100;
     this.enemies.setSpawnPaused(true);
     this.screenShake = 0.45;
     this.callbacks.onBossSpawn?.({ name: this.boss.name, wave: this.wave, stage: true });
+    this.lastBannerText = this.boss.name ? `BOSS: ${this.boss.name}` : this.lastBannerText;
   }
 
   _onBossDefeated() {
@@ -398,6 +415,7 @@ class Game {
       const angle = (i / 12) * Math.PI * 2;
       this.stars.spawn(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20, 18);
     }
+    this._grantStarDrops(18, 12);
     this.powerups.spawn(x, y, 'weapon');
     this.powerups.spawn(x - 30, y + 10, 'shield');
     this.waveBannerTimer = 2.5;
@@ -417,6 +435,7 @@ class Game {
       const save = SkyForceSave.load();
       const confirmed = CollectionSystem.confirmRunLoot(save);
       SkyForceSave.write(save);
+      this.agentOutcome = 'stage_clear';
       this.running = false;
       this.callbacks.onStageComplete?.({
         score: this.score,
@@ -452,34 +471,56 @@ class Game {
     return (this.hangarStats.luckMult || 1) * (this.hangarStats.lootLuckMult || 1);
   }
 
+  /** Credit run ★ when enemies/destructibles drop stars (Sky Force style — not pickup-only). */
+  _grantStarDrops(starValue, count = 1) {
+    const mult = this.hangarStats.starPickupMult || 1;
+    const each = Math.max(1, Math.round((starValue / 10) * mult));
+    this.runStars += each * count;
+  }
+
+  _spawnStarJuice(x, y, starValue, count, offsetFn) {
+    this._grantStarDrops(starValue, count);
+    for (let i = 0; i < count; i += 1) {
+      const off = offsetFn ? offsetFn(i, count) : { ox: (Math.random() - 0.5) * 16, oy: (Math.random() - 0.5) * 12 };
+      this.stars.spawn(x + off.ox, y + off.oy, starValue);
+    }
+  }
+
+  _lootSpawnY() {
+    const lane = Player.laneFor(this.canvas.height);
+    return lane.center + (Math.random() - 0.5) * 56;
+  }
+
   _tryLootDrop(x, y, source) {
     const luck = this._luckMult();
+    const spawnX = x + (Math.random() - 0.5) * 32;
+    const spawnY = this._lootSpawnY();
     const card = CollectionSystem.rollCardDrop(source, luck);
     if (card) {
-      this.runLoot.spawn(x, y, 'card', card.id);
+      this._grantLootDrop('card', card.id, spawnX, spawnY);
       return;
     }
-    const part = CollectionSystem.rollPartDrop(luck, source === 'radar' ? 'radar' : 'elite');
-    if (part) this.runLoot.spawn(x, y, 'part', part);
+  }
+
+  _grantLootDrop(kind, payload, x, y) {
+    const save = SkyForceSave.load();
+    let label = '';
+    let added = false;
+    if (kind === 'card') {
+      added = CollectionSystem.addUnconfirmedCard(save, payload);
+      if (added) {
+        const def = CollectionSystem.getCardDef(payload);
+        label = def?.name || 'Card';
+      }
+    }
+    if (!added) return;
+    SkyForceSave.write(save);
+    this.callbacks.onLootPickup?.(kind, label);
+    this.runLoot.spawn(x, y, kind, payload);
+    this.fx.burst(x, y, { count: 10, speed: 90, color: kind === 'card' ? '#c084fc' : '#22d3ee', life: 0.35 });
   }
 
   _collectRunLoot(item) {
-    const save = SkyForceSave.load();
-    let label = '';
-    if (item.kind === 'card') {
-      if (CollectionSystem.addUnconfirmedCard(save, item.payload)) {
-        const def = CollectionSystem.getCardDef(item.payload);
-        label = def?.name || 'Card';
-        this.callbacks.onLootPickup?.('card', label);
-      }
-    } else if (item.kind === 'part') {
-      if (CollectionSystem.addUnconfirmedPart(save, item.payload)) {
-        const def = COLLECTION_CONFIG.partLabels[item.payload];
-        label = def || 'Ship Part';
-        this.callbacks.onLootPickup?.('part', label);
-      }
-    }
-    SkyForceSave.write(save);
     item.active = false;
   }
 
@@ -498,14 +539,19 @@ class Game {
         if (Math.random() < 0.4) this.powerups.spawn(x + 20, y + 8, 'shield');
       }
       for (let i = 0; i < 3; i += 1) {
-        this.stars.spawn(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 20, 14);
+        this._spawnStarJuice(
+          x + (Math.random() - 0.5) * 30,
+          y + (Math.random() - 0.5) * 20,
+          14,
+          1,
+        );
       }
       this._tryLootDrop(x, y, 'crate');
     } else {
-      for (let i = 0; i < 18; i += 1) {
-        const angle = (i / 18) * Math.PI * 2;
-        this.stars.spawn(x + Math.cos(angle) * 28, y + Math.sin(angle) * 28, 24);
-      }
+      this._spawnStarJuice(x, y, 24, 18, (i, total) => ({
+        ox: Math.cos((i / total) * Math.PI * 2) * 28,
+        oy: Math.sin((i / total) * Math.PI * 2) * 28,
+      }));
       this._tryLootDrop(x, y, 'radar');
     }
   }
@@ -541,7 +587,7 @@ class Game {
       if (enemy.takeDamage(Math.round(enemy.maxHp * 0.55))) {
         this._addScore(enemy.points);
         this.stageDirector?.onEnemyKilled();
-        this.stars.spawn(enemy.x, enemy.y, 12);
+        this._spawnStarJuice(enemy.x, enemy.y, 12, 1);
       }
     }
     if (this.boss?.alive) {
@@ -556,16 +602,16 @@ class Game {
     const dmg = 80 * dt;
     for (const enemy of this.enemies.list) {
       if (!enemy.alive) continue;
-      if (Math.abs(enemy.x - px) < 20 && enemy.y < this.player.y) {
+      if (Math.abs(enemy.x - px) < 20 && enemy.y > this.player.y) {
         if (enemy.takeDamage(dmg)) {
           this._addScore(enemy.points);
           this.stageDirector?.onEnemyKilled();
-          this.stars.spawn(enemy.x, enemy.y, 10);
+          this._spawnStarJuice(enemy.x, enemy.y, 10, 1);
           this.screenShake = 0.15;
         }
       }
     }
-    if (this.boss?.alive && Math.abs(this.boss.x - px) < 40) {
+    if (this.boss?.alive && Math.abs(this.boss.x - px) < 40 && this.boss.y > this.player.y) {
       this.boss.takeDamage(dmg * 1.5);
       this.bossHpPct = this.boss.hpPct;
     }
@@ -621,14 +667,15 @@ class Game {
             }
             if (this.mode === 'arcade') this.enemyKillsThisWave += 1;
             this.stageDirector?.onEnemyKilled();
-            const starVal = 12 + Math.floor(enemy.points / 40);
-            for (let s = 0; s < (enemy.elite ? 4 : 2); s += 1) {
-              this.stars.spawn(
-                enemy.x + (Math.random() - 0.5) * 24,
-                enemy.y + (Math.random() - 0.5) * 16,
-                starVal,
-              );
-            }
+        const starVal = 12 + Math.floor(enemy.points / 40);
+        const dropCount = enemy.elite ? 4 : 2;
+        this._spawnStarJuice(
+          enemy.x,
+          enemy.y,
+          starVal,
+          dropCount,
+          () => ({ ox: (Math.random() - 0.5) * 24, oy: (Math.random() - 0.5) * 16 }),
+        );
             this.screenShake = 0.12;
             if (enemy.elite) this._tryLootDrop(enemy.x, enemy.y, 'elite');
             if (Math.random() < enemy.dropChance) {
@@ -685,10 +732,11 @@ class Game {
 
     for (const star of this.stars.list) {
       if (!star.active) continue;
-      if (this._hit(star, this.player, 1.4, true)) {
+      const dx = star.x - this.player.x;
+      const dy = star.y - this.player.y;
+      const collectR = Math.max(22, this.hangarStats.magnetRadius * 0.55);
+      if (dx * dx + dy * dy <= collectR * collectR || this._hit(star, this.player, 1.6, true)) {
         star.active = false;
-        const starMult = this.hangarStats.starPickupMult || 1;
-        this.runStars += Math.max(1, Math.round((star.value / 10) * starMult));
         this._addScore(star.value);
       }
     }
@@ -718,8 +766,10 @@ class Game {
     this.lives -= 1;
     this.combo = 1;
     this.comboTimer = 0;
-    this.player.reset(this.canvas.width / 2, this.canvas.height - 80);
+    this.player.reset(this.canvas.width / 2, this.canvas.height * FLIGHT_LANE.center);
     if (this.lives <= 0) {
+      this.agentOutcome = 'game_over';
+      this.agentDeathCause = this.bossActive ? 'boss' : 'out_of_lives';
       this.running = false;
       this.stageDirector?.stop();
       const save = SkyForceSave.load();
@@ -748,14 +798,17 @@ class Game {
     this.background.draw(ctx);
     this.stars.draw(ctx);
     this.powerups.draw(ctx);
-    this.enemies.draw(ctx);
+    this.enemies.draw(ctx, { horizonY: this.background.getHorizonY() });
     this.destructibles.draw(ctx);
     this.hostages.draw(ctx);
     if (this.boss?.alive) this.boss.draw(ctx);
     this.bullets.draw(ctx);
     this.fx.draw(ctx);
     this.runLoot.draw(ctx);
-    this.player.draw(ctx);
+    this.player.draw(ctx, {
+      horizonY: this.background.getHorizonY(),
+      scrollY: this.background.scrollY,
+    });
     if (this.mode === 'stage') this._drawCheckpointMarker(ctx);
     if (this.hitFlash > 0) {
       ctx.fillStyle = `rgba(244, 63, 94, ${this.hitFlash * 0.35})`;

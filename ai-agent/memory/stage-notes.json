@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "stages": {
+    "1": {
+      "name": "Desert Storm",
+      "tips": ["Rescue hostages between waves", "Boss: stay center, dodge horizontal spread"]
+    },
+    "2": {
+      "name": "Fleet Assault",
+      "tips": [
+        "BOMBARDMENT section: destroy fuel depots for run ★",
+        "Ground turrets fire upward — dodge vertically in lane",
+        "Boss Dreadnought: wide lane, prioritize vertical dodges"
+      ],
+      "sectionHints": {
+        "3": "Fuel depot timing — engage destructibles"
+      }
+    },
+    "3": {
+      "name": "Iron Valley",
+      "tips": ["Bunker targets on ground", "Section pacing tighter than stage 2"]
+    },
+    "4": {
+      "name": "Black Coast",
+      "tips": ["Siege platform boss — longer bullet patterns"]
+    },
+    "5": {
+      "name": "Skyfall Ridge",
+      "tips": ["Leviathan finale — conserve lives early"]
+    }
+  }
+}

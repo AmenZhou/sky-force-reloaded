@@ -1,68 +1,68 @@
 {
-  "version": 2,
-  "profile": "heavy-grind",
+  "version": 3,
+  "profile": "moderate-grind",
   "modules": {
     "hp": {
       "label": "Shield / HP",
       "unlock": 0,
-      "base": 50,
-      "growth": 1.48,
+      "base": 35,
+      "growth": 1.38,
       "maxLevel": 10,
       "effect": "shieldMax = 100 + level * 15"
     },
     "cannon": {
       "label": "Main Cannon",
       "unlock": 0,
-      "base": 100,
-      "growth": 1.51,
+      "base": 70,
+      "growth": 1.42,
       "maxLevel": 10,
       "effect": "dpsIndex = 1.0 + level * 0.10; pattern tier every 3 levels"
     },
     "magnet": {
       "label": "Star Magnet",
-      "unlock": 2000,
-      "base": 80,
-      "growth": 1.53,
+      "unlock": 800,
+      "base": 55,
+      "growth": 1.44,
       "maxLevel": 10,
       "effect": "radius = 40 + level * 12; strength = 100 + level * 30"
     },
     "wings": {
       "label": "Wing Cannons",
-      "unlock": 6000,
-      "base": 160,
-      "growth": 1.57,
+      "unlock": 2500,
+      "base": 110,
+      "growth": 1.48,
       "maxLevel": 10,
       "effect": "sideShotLevel = floor(level / 2)"
     },
     "missiles": {
-      "label": "Homing Missiles",
-      "unlock": 7000,
-      "base": 200,
-      "growth": 1.59,
+      "label": "Following Missiles",
+      "unlock": 2500,
+      "base": 120,
+      "growth": 1.48,
       "maxLevel": 8,
-      "effect": "missileSalvo = 1 + floor(level / 2)"
+      "effect": "missileSalvo = 1 + floor(level / 2); interval max(1.2, 2.8 - level * 0.15)"
     },
     "energy_shield": {
       "label": "Energy Shield (stock)",
-      "unlock": 6000,
-      "base": 170,
-      "growth": 1.57,
+      "unlock": 2500,
+      "base": 115,
+      "growth": 1.48,
       "maxLevel": 6,
       "effect": "preStageShieldCharges = level"
     },
     "mega_bomb": {
       "label": "Mega Bomb (stock)",
-      "unlock": 6000,
-      "base": 170,
-      "growth": 1.57,
+      "unlock": 2500,
+      "base": 115,
+      "growth": 1.48,
       "maxLevel": 6,
       "effect": "preStageBombCharges = level"
     },
     "laser": {
       "label": "Laser (stock)",
-      "unlock": 6000,
-      "base": 180,
-      "growth": 1.57,
+      "unlock": 2500,
+      "base": 120,
+      "growth": 1.48,
       "maxLevel": 6,
       "effect": "preStageLaserCharges = level"
     }

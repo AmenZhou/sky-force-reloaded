@@ -1,5 +1,12 @@
 const WEAPON_COOLDOWNS = [0.12, 0.09, 0.07, 0.05];
 
+/** Cruise altitude — open sky just under the cloud deck (see Background._drawCloudDeck). */
+const FLIGHT_LANE = {
+  top: 0.26,
+  bottom: 0.46,
+  center: 0.36,
+};
+
 class Player {
   constructor(x, y) {
     this.x = x;
@@ -20,6 +27,7 @@ class Player {
     this.hangarStats = null;
     this.energyShieldActive = 0;
     this.laserActive = 0;
+    this.bankAngle = 0;
   }
 
   get shieldPct() {
@@ -48,15 +56,29 @@ class Player {
     this.laserActive = 0;
   }
 
+  static laneFor(h) {
+    return {
+      top: h * FLIGHT_LANE.top,
+      bottom: h * FLIGHT_LANE.bottom,
+      center: h * FLIGHT_LANE.center,
+    };
+  }
+
   moveByAxes(ax, ay, dt, w, h) {
     const spd = this.speed * (this.moveSpeedMult || 1);
-    this.x = Math.max(this.hitboxRadius, Math.min(w - this.hitboxRadius, this.x + ax * spd * dt));
-    this.y = Math.max(h * 0.45, Math.min(h - this.hitboxRadius, this.y + ay * spd * dt));
+    const lane = Player.laneFor(h);
+    const vx = ax * spd * dt;
+    const vy = ay * spd * 0.55 * dt;
+    this.bankAngle = ax * 0.28;
+    this.x = Math.max(this.hitboxRadius, Math.min(w - this.hitboxRadius, this.x + vx));
+    this.y = Math.max(lane.top, Math.min(lane.bottom, this.y + vy));
   }
 
   moveByDelta(dx, dy, w, h) {
+    const lane = Player.laneFor(h);
+    this.bankAngle = Math.max(-0.35, Math.min(0.35, dx * 0.004));
     this.x = Math.max(this.hitboxRadius, Math.min(w - this.hitboxRadius, this.x + dx));
-    this.y = Math.max(h * 0.45, Math.min(h - this.hitboxRadius, this.y + dy));
+    this.y = Math.max(lane.top, Math.min(lane.bottom, this.y + dy * 0.55));
   }
 
   _cannonPattern() {
@@ -67,6 +89,15 @@ class Player {
     if (tier >= 3) return [-12, 0, 12];
     if (tier >= 2) return [-8, 8];
     return [0];
+  }
+
+  _missileStats(hs) {
+    const hangarSalvo = hs?.missileSalvo || 0;
+    const intrinsic = hs?.intrinsicMissileSalvo || 0;
+    const salvo = Math.max(hangarSalvo, intrinsic);
+    let interval = hs?.missileInterval || 0;
+    if (salvo > 0 && interval <= 0) interval = intrinsic > 0 ? 2.2 : 2.5;
+    return { salvo, interval };
   }
 
   fire(bulletPool, dt, enemies = []) {
@@ -83,30 +114,31 @@ class Player {
     const spread = this._cannonPattern();
     const dmg = Math.round((8 + this.weaponLevel + (hs?.cannonDamageBonus || 0)) * (this.damageMult || 1));
     for (const offset of spread) {
-      bulletPool.spawnPlayerBullet(this.x + offset, this.y - 18, 520, dmg);
+      bulletPool.spawnPlayerBullet(this.x + offset, this.y + 18, 520, dmg);
     }
 
     const wing = hs?.wingLevel || 0;
-    if (this.missileSwarm && hs?.missileSalvo > 0) {
+    const ms = this._missileStats(hs);
+    if (this.missileSwarm && ms.salvo > 0) {
       this.missileTimer -= dt;
       if (this.missileTimer <= 0) {
-        this.missileTimer = (hs.missileInterval || 2.5) * 0.85;
-        bulletPool.fireHomingMissiles(this, enemies, hs.missileSalvo + 2, dmg);
+        this.missileTimer = ms.interval * 0.85;
+        bulletPool.fireHomingMissiles(this, enemies, ms.salvo + 2, dmg);
       }
     } else if (wing >= 1) {
-      bulletPool.spawnPlayerBullet(this.x - 22, this.y - 8, 480, dmg - 2);
-      bulletPool.spawnPlayerBullet(this.x + 22, this.y - 8, 480, dmg - 2);
+      bulletPool.spawnPlayerBullet(this.x - 22, this.y + 8, 480, dmg - 2);
+      bulletPool.spawnPlayerBullet(this.x + 22, this.y + 8, 480, dmg - 2);
     }
     if (wing >= 2) {
-      bulletPool.spawnPlayerBullet(this.x - 32, this.y - 4, 440, dmg - 3);
-      bulletPool.spawnPlayerBullet(this.x + 32, this.y - 4, 440, dmg - 3);
+      bulletPool.spawnPlayerBullet(this.x - 32, this.y + 4, 440, dmg - 3);
+      bulletPool.spawnPlayerBullet(this.x + 32, this.y + 4, 440, dmg - 3);
     }
 
-    if (!this.missileSwarm && hs?.missileSalvo > 0) {
+    if (!this.missileSwarm && ms.salvo > 0) {
       this.missileTimer -= dt;
       if (this.missileTimer <= 0) {
-        this.missileTimer = hs.missileInterval || 2.5;
-        bulletPool.fireHomingMissiles(this, enemies, hs.missileSalvo, dmg + 4);
+        this.missileTimer = ms.interval;
+        bulletPool.fireHomingMissiles(this, enemies, ms.salvo, dmg + 4);
       }
     }
   }
@@ -145,9 +177,15 @@ class Player {
     this.laserActive = 2.5;
   }
 
-  draw(ctx) {
+  draw(ctx, opts = {}) {
+    const { horizonY, scrollY = 0 } = opts;
+    if (horizonY != null) {
+      this._drawGroundShadow(ctx, horizonY);
+    }
+
     ctx.save();
     ctx.translate(this.x, this.y);
+    ctx.rotate((this.bankAngle || 0) + 0.12);
 
     if (this.hitFlash > 0) {
       ctx.globalAlpha = 0.35 + Math.sin(Date.now() * 0.04) * 0.25;
@@ -165,7 +203,7 @@ class Player {
 
     if (this.laserActive > 0) {
       const beamH = 340;
-      const core = ctx.createLinearGradient(0, -beamH, 0, 0);
+      const core = ctx.createLinearGradient(0, 0, 0, beamH);
       core.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
       core.addColorStop(0.15, 'rgba(186, 230, 253, 0.9)');
       core.addColorStop(0.5, 'rgba(56, 189, 248, 0.75)');
@@ -173,19 +211,33 @@ class Player {
       ctx.shadowColor = '#38bdf8';
       ctx.shadowBlur = 24;
       ctx.fillStyle = core;
-      ctx.fillRect(-8, -beamH, 16, beamH);
+      ctx.fillRect(-8, 0, 16, beamH);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      ctx.fillRect(-2, -beamH, 4, beamH);
+      ctx.fillRect(-2, 0, 4, beamH);
       ctx.shadowBlur = 0;
     }
 
-    const exhaust = ctx.createRadialGradient(0, 14, 0, 0, 14, 20);
+    const exhaust = ctx.createRadialGradient(0, -12, 0, 0, -12, 18);
     exhaust.addColorStop(0, 'rgba(251, 146, 60, 0.95)');
     exhaust.addColorStop(0.5, 'rgba(239, 68, 68, 0.5)');
     exhaust.addColorStop(1, 'rgba(239, 68, 68, 0)');
     ctx.fillStyle = exhaust;
     ctx.beginPath();
-    ctx.ellipse(0, 14, 10, 18, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -12, 10, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const trailLen = 14 + Math.sin(scrollY * 0.08) * 3;
+    const trail = ctx.createLinearGradient(0, -12, 0, -12 - trailLen);
+    trail.addColorStop(0, 'rgba(251, 191, 36, 0.85)');
+    trail.addColorStop(0.45, 'rgba(249, 115, 22, 0.35)');
+    trail.addColorStop(1, 'rgba(249, 115, 22, 0)');
+    ctx.fillStyle = trail;
+    ctx.beginPath();
+    ctx.moveTo(-4, -12);
+    ctx.lineTo(4, -12);
+    ctx.lineTo(2, -12 - trailLen);
+    ctx.lineTo(-2, -12 - trailLen);
+    ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = '#fef2f2';
@@ -236,10 +288,25 @@ class Player {
     ctx.restore();
   }
 
+  _drawGroundShadow(ctx, horizonY) {
+    const drop = Math.max(0, this.y - horizonY + 18);
+    const scale = 1 + drop * 0.0018;
+    const alpha = Math.max(0.08, 0.28 - drop * 0.00035);
+    ctx.save();
+    ctx.translate(this.x, horizonY + 8 + drop * 0.12);
+    ctx.scale(scale, scale * 0.45);
+    ctx.fillStyle = `rgba(15, 23, 42, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.radius + 6, this.radius * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   tick(dt) {
     if (this.invuln > 0) this.invuln -= dt;
     if (this.hitFlash > 0) this.hitFlash -= dt;
     if (this.energyShieldActive > 0) this.energyShieldActive -= dt;
     if (this.laserActive > 0) this.laserActive -= dt;
+    this.bankAngle *= 0.9;
   }
 }

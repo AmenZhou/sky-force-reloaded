@@ -85,7 +85,7 @@ flowchart TD
 |--------|-----|-------------|-------|
 | Title hub | S01 | ✓ | Shows banked ★; three CTAs |
 | Hangar | S09 | ✓ | 8-module grid, upgrade buttons |
-| Stage map | S02 | ✓ | Stage 1 only; difficulty + medals |
+| Stage map | S02 | ✓ | Stages 1–2; lock until prior clear; difficulty + medals |
 | In-game HUD | S04 | ✓ | Score, run stars, section/wave, lives, shield, weapon, combo, boss bar |
 | Time dilation overlay | S06 | ✓ | Cyan ring + speed badge (20% Focus Time) |
 | Ability bar | — | ✓ | Laser / Shield / Bomb charges |

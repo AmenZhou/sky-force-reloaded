@@ -3,16 +3,18 @@
  * Higher fireRate = fewer shots (seconds between bursts).
  */
 window.ENEMY_BALANCE = {
-  fighterFireRate: 2.65,
-  tankFireRate: 3.35,
-  /** Skip this fraction of aimed shots (0–1) to thin the screen. */
-  fireSkipChance: 0.18,
-  maxShootersPerTick: 4,
-  bulletSpeedBase: 165,
-  bulletSpeedWave: 1.5,
-  bulletSpeedCap: 205,
+  fighterFireRate: 9,
+  tankFireRate: 5.2,
+  turretFireRate: 4.8,
+  /** Only ground batteries shoot in the new ground-war profile. */
+  groundShootersOnly: true,
+  fireSkipChance: 0.42,
+  maxShootersPerTick: 2,
+  bulletSpeedBase: 145,
+  bulletSpeedWave: 0.9,
+  bulletSpeedCap: 180,
   boss: {
-    phase1: { bullets: 5, interval: 1.12 },
-    phase2: { arms: 7, interval: 0.58, extraAimed: false },
+    phase1: { bullets: 3, interval: 1.55 },
+    phase2: { arms: 4, interval: 0.95, extraAimed: false },
   },
 };

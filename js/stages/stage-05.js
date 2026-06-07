@@ -1,0 +1,85 @@
+/** Stage 5 — Skyfall Ridge (mirrors data/stages/stage-05.json). */
+window.SKY_FORCE_STAGES = window.SKY_FORCE_STAGES || {};
+window.SKY_FORCE_STAGES['stage-05'] = {
+  id: 5,
+  name: 'Skyfall Ridge',
+  subtitle: 'Sector 31 — Final approach',
+  theme: 'terrain',
+  hostageCount: 4,
+  unlockStars: 0,
+  difficultyMultipliers: {
+    normal: { enemyHp: 1.48, bulletSpeed: 1.15, starReward: 1.28 },
+  },
+  timeline: [
+    { atSec: 0, action: 'banner', text: 'SECTOR 31 — SKYFALL RIDGE', kind: 'stage' },
+    { atSec: 0, action: 'setSection', section: 1 },
+    { atSec: 4, action: 'banner', text: 'FORWARD OUTPOST', kind: 'wave' },
+    { atSec: 5, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.2, y: 0.69 },
+      { type: 'turret', x: 0.8, y: 0.69 },
+      { type: 'tank', x: 0.35, y: 0.74 },
+      { type: 'tank', x: 0.65, y: 0.74 },
+    ] },
+    { atSec: 10, action: 'spawnHostage', id: 'h1', x: 0.22, y: 0.58 },
+    { atSec: 12, action: 'spawnDestructible', destructible: 'crate', x: 0.5, y: 0.76 },
+    { atSec: 16, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.5, y: 0.68 },
+      { type: 'tank', x: 0.28, y: 0.75, elite: true },
+      { type: 'tank', x: 0.72, y: 0.75 },
+    ] },
+    { atSec: 22, action: 'setSection', section: 2 },
+    { atSec: 22, action: 'banner', text: 'TWIN BATTERIES', kind: 'wave' },
+    { atSec: 24, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.15, y: 0.7 },
+      { type: 'turret', x: 0.85, y: 0.7 },
+      { type: 'turret', x: 0.35, y: 0.75 },
+      { type: 'turret', x: 0.65, y: 0.75 },
+    ] },
+    { atSec: 30, action: 'spawnHostage', id: 'h2', x: 0.55, y: 0.57 },
+    { atSec: 32, action: 'spawnDestructible', destructible: 'radar', x: 0.25, y: 0.78 },
+    { atSec: 34, action: 'spawnDestructible', destructible: 'radar', x: 0.75, y: 0.78 },
+    { atSec: 38, action: 'spawnGroup', enemies: [
+      { type: 'tank', x: 0.2, y: 0.73 },
+      { type: 'tank', x: 0.5, y: 0.76 },
+      { type: 'tank', x: 0.8, y: 0.73 },
+      { type: 'turret', x: 0.5, y: 0.68 },
+    ] },
+    { atSec: 44, action: 'setSection', section: 3 },
+    { atSec: 44, action: 'banner', text: 'COMMAND STRIKE', kind: 'wave' },
+    { atSec: 46, action: 'spawnHostage', id: 'h3', x: 0.38, y: 0.56 },
+    { atSec: 48, action: 'spawnGroup', enemies: [
+      { type: 'tank', x: 0.3, y: 0.72, elite: true },
+      { type: 'tank', x: 0.7, y: 0.72, elite: true },
+      { type: 'turret', x: 0.18, y: 0.76 },
+      { type: 'turret', x: 0.82, y: 0.76 },
+      { type: 'tank', x: 0.5, y: 0.78 },
+    ] },
+    { atSec: 54, action: 'spawnHostage', id: 'h4', x: 0.72, y: 0.59 },
+    { atSec: 56, action: 'spawnDestructible', destructible: 'fuel', x: 0.18, y: 0.79 },
+    { atSec: 58, action: 'spawnDestructible', destructible: 'fuel', x: 0.82, y: 0.79 },
+    { atSec: 62, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.25, y: 0.69 },
+      { type: 'turret', x: 0.75, y: 0.69 },
+      { type: 'tank', x: 0.4, y: 0.76 },
+      { type: 'tank', x: 0.6, y: 0.76 },
+      { type: 'tank', x: 0.5, y: 0.78, elite: true },
+    ] },
+    { atSec: 68, action: 'setSection', section: 4 },
+    { atSec: 68, action: 'banner', text: 'LEVIATHAN', kind: 'boss' },
+    { atSec: 72, action: 'spawnBoss', type: 'dreadnought', hp: 7200, name: 'LEVIATHAN', radius: 48, fireScale: 1.15 },
+  ],
+  medals: {
+    annihilation70: { threshold: 0.7 },
+    annihilation100: { threshold: 1 },
+    rescueAll: { survivorIds: [] },
+  },
+  clearBonusStars: 125,
+};
+
+window.SKY_FORCE_STAGE_ORDER = [
+  'stage-01',
+  'stage-02',
+  'stage-03',
+  'stage-04',
+  'stage-05',
+];

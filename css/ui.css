@@ -679,7 +679,13 @@ kbd.key {
   border: 1px solid rgba(167, 139, 250, 0.35);
   border-radius: 0.85rem;
   padding: 1rem;
+  margin-bottom: 0.85rem;
 }
+.stage-card.locked {
+  opacity: 0.55;
+  border-color: rgba(100, 116, 139, 0.35);
+}
+.stage-card.locked .stage-card-title { color: #64748b; }
 .stage-card-title { font-family: 'Orbitron', sans-serif; font-weight: 800; color: #c4b5fd; }
 .stage-card-sub { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.75rem; }
 

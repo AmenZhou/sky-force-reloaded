@@ -33,7 +33,7 @@ class BulletPool {
     b.x = x;
     b.y = y;
     b.vx = 0;
-    b.vy = -speed;
+    b.vy = speed;
     b.radius = 4;
     b.damage = damage;
     b.color = '#ff9f43';
@@ -57,9 +57,9 @@ class BulletPool {
     for (let i = 0; i < count; i += 1) {
       const m = this.missilePool.acquire();
       m.x = player.x + (i - (count - 1) / 2) * 12;
-      m.y = player.y - 10;
+      m.y = player.y + 10;
       m.vx = 0;
-      m.vy = -280;
+      m.vy = 280;
       m.damage = damage;
       m.active = true;
       m.target = targets[i % Math.max(1, targets.length)] || null;
@@ -70,7 +70,7 @@ class BulletPool {
     this.playerPool.forEachActive((b) => {
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.y < -20 || b.x < -20 || b.x > w + 20) {
+      if (b.y > h + 20 || b.x < -20 || b.x > w + 20) {
         this.playerPool.release(b);
       }
     });
@@ -115,7 +115,7 @@ class BulletPool {
       ctx.fill();
       ctx.fillStyle = 'rgba(255, 237, 213, 0.6)';
       ctx.beginPath();
-      ctx.ellipse(b.x, b.y + 4, b.radius * 0.6, b.radius * 1.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(b.x, b.y - 4, b.radius * 0.6, b.radius * 1.8, 0, 0, Math.PI * 2);
       ctx.fill();
     });
     this.missilePool.forEachActive((m) => {

@@ -14,6 +14,7 @@ const SkyForceSave = {
       stageMedals: {},
       friendCheckpointScore: 42000,
       equippedShip: 'enforcer',
+      unlockedShips: ['enforcer'],
       collection: { cards: [], parts: [] },
       runUnconfirmed: { cards: [], parts: [] },
       activeTempCards: {},
@@ -24,7 +25,9 @@ const SkyForceSave = {
     try {
       const raw = localStorage.getItem(SKY_FORCE_SAVE_KEY);
       if (!raw) return this._default();
-      return { ...this._default(), ...JSON.parse(raw) };
+      const save = { ...this._default(), ...JSON.parse(raw) };
+      save.bankedStars = Math.max(0, Math.floor(Number(save.bankedStars) || 0));
+      return save;
     } catch {
       return this._default();
     }
@@ -40,7 +43,35 @@ const SkyForceSave = {
 
   bankRunStars(amount) {
     const save = this.load();
-    save.bankedStars += Math.max(0, amount);
+    const credit = Math.max(0, Math.floor(Number(amount) || 0));
+    save.bankedStars += credit;
+    this.write(save);
+    return save.bankedStars;
+  },
+
+  /** Single write: bank stars + medals + stage clear (avoids stale save clobber). */
+  completeStageRun({ toBank, stageId, score, difficulty, medals }) {
+    const save = this.load();
+    save.bankedStars += Math.max(0, Math.floor(Number(toBank) || 0));
+
+    const key = String(stageId);
+    save.stageMedals = save.stageMedals || {};
+    save.stageMedals[key] = save.stageMedals[key] || {};
+    const prevMedals = new Set(save.stageMedals[key][difficulty] || []);
+    (medals || []).forEach((id) => prevMedals.add(id));
+    save.stageMedals[key][difficulty] = [...prevMedals];
+
+    const prevScore = save.stageClears[key]?.score || 0;
+    save.stageClears[key] = {
+      score: Math.max(prevScore, score),
+      difficulty,
+      at: Date.now(),
+    };
+    if (!save.unlockedStages.includes(stageId + 1)) {
+      save.unlockedStages.push(stageId + 1);
+    }
+    if (score > save.highScore) save.highScore = score;
+
     this.write(save);
     return save.bankedStars;
   },

@@ -1,6 +1,6 @@
 # Sky Force — AI Agent
 
-Playwright agent for balance testing and self-improving heuristics.
+Playwright agent for balance testing, structured log analysis, and self-improving heuristics with cross-session memory.
 
 ## Quick start
 
@@ -9,55 +9,77 @@ cd ai-agent
 npm install
 npx playwright install chromium
 
-# Heuristic bot (uses agent-config.json)
-node agent.js --heuristic --headless --turns 80 --tick 500
+# Stage 2 pilot (default improve-loop scenario)
+node agent.js --heuristic --headless --stage --stage-id 2 --turns 200 --tick 350
 
-# Auto-tune after run
-node agent.js --heuristic --headless --turns 80 --tune-after
+# Analyze latest log → markdown report
+node analyze-report.js
 
-# Self-improve loop (run → tune → run → …)
+# Analyze + append UX/FUN items to backlog.md
+node analyze-report.js --write
+
+# Update memory (metrics-history + playbook) after a run
+node agent.js --heuristic --headless --stage --stage-id 2 --turns 80 --update-memory
+
+# Extended self-improve loop (run → analyze → tune → memory → backlog)
+node improve-loop.js --headless --generations 3
+
+# Legacy narrow loop (config tune only)
 node improve.js --headless --generations 3 --turns 60 --tick 500
-
-# LLM player (needs OPENAI_API_KEY or ANTHROPIC_API_KEY)
-node agent.js --model openai --headless --turns 25 --tick 800
-node agent.js --model claude --headless --turns 25 --tick 800
 ```
 
 ## Architecture
 
 | File | Role |
 |------|------|
-| `agent.js` | Playwright loop — heuristic or LLM mode |
-| `agent-config.json` | Tunable heuristic thresholds |
-| `tune.js` | Reads latest JSONL log, adjusts config |
-| `improve.js` | Multi-generation run → tune loop |
-| `analyze-logs.js` | Human-readable log summary |
-| `lib/heuristic.js` | Rule-based `pickMove` |
-| `lib/llm.js` | OpenAI / Claude move picker |
-| `lib/tuner.js` | Metric → config patch logic |
+| `agent.js` | Playwright loop — rich JSONL (`tick`, `event`, `session_end`) |
+| `analyze-report.js` | Full tagged analysis report (`[BUG]` `[UX]` `[FUN]` …) |
+| `improve-loop.js` | Multi-gen run → analyze → tune → memory → backlog |
+| `memory/playbook.md` | Durable tactics (human + agent readable) |
+| `memory/stage-notes.json` | Per-stage hints fed to heuristic |
+| `memory/metrics-history.jsonl` | One compressed metrics line per run |
+| `memory/update-from-log.js` | Append metrics + merge playbook deltas |
+| `research/sky-force-reloaded.md` | Reference brief for UX/fun backlog |
+| `backlog.md` | UX / FUN / ECON / RESEARCH proposals (not auto-fixed) |
+| `agent-config.json` | Tunable heuristic thresholds + targets |
+| `lib/issue-tags.js` | Log → tagged issues |
+| `lib/analyze-report.js` | Report builder |
+| `lib/heuristic.js` | Rule-based move picker (+ stage hints) |
+| `tune.js` | Metric → config patch |
 | `logs/run-*.jsonl` | Session recordings |
 
-## Self-improvement
+## JSONL schema (v2)
 
-**Heuristic path (automated):**
+| Type | Purpose |
+|------|---------|
+| `session_start` | `profile`, `stageId`, `playbookVersion`, `configGeneration` |
+| `tick` | `runStars`, `section`, `stageName`, `lastBanner`, `hostages*` |
+| `event` | `section_banner`, `death`, `boss_spawn`, `stage_clear`, `game_over`, `star_milestone` |
+| `action` | Heuristic/LLM move |
+| `session_end` | `stageCleared`, `finalRunStars`, `sectionsReached`, `deathCause` |
+| `page_error` / `console_error` | Runtime failures |
 
-1. Agent plays using `agent-config.json`
-2. `tune.js` compares `session_end` metrics to targets
-3. Adjusts dodge ranges, pickup seek, bullet-hell threshold
-4. `improve.js` repeats until targets met or generations exhausted
+## Autonomy defaults
 
-**LLM path (adaptive per turn):**
+| Tag | Default action |
+|-----|----------------|
+| `[BUG]`, `[AGENT]` | Auto-fix in skill Phase 3 |
+| `[UX]`, `[FUN]`, `[ECON]`, `[RESEARCH]` | Append to `backlog.md` |
+| Heuristic tune | Auto via `tune.js` / `improve-loop.js` |
+| Memory | Auto via `--update-memory` or improve-loop |
 
-- Sends compact `getState()` snapshot each turn
-- Model picks dodge direction without code changes
-- Does not auto-tune config — use for strategy experiments
-
-## Targets (edit in agent-config.json)
+## Targets (`agent-config.json`)
 
 ```json
 "targets": {
-  "minWave": 3,
-  "maxHitsPer80Turns": 12,
-  "minScore": 8000
+  "sectionsReached": 3,
+  "minRunStars": 40,
+  "maxHits": 12,
+  "minScore": 5000,
+  "stageClear": false
 }
 ```
+
+Set `"stageClear": true` when the agent reliably reaches the boss.
+
+See `IMPROVEMENT-PLAN.md` for the full v3 roadmap.

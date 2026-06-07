@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0 — 2026-06-07 (unreleased)
+
+- **Stage 2 — Fleet Assault:** `data/stages/stage-02.json` + `js/stages/stage-02.js` (~66s script, 3 hostages, Dreadnought boss 5200 HP)
+- **Turret enemy:** ground battery type with aimed fire, distinct silhouette, used in Stage 2 formations
+- **Fleet background theme:** industrial scrolling terrain for Stage 2; stages use `theme` field from JSON
+- **Stage map:** multi-stage list with lock/unlock; clear screen **Next Stage** button after Stage 1
+- Generic stage retry via `getStageById()`; `__SKY_FORCE__.startStage2()` for agents
+
 ## 0.7.0 — 2026-06-07
 
 - Visual pass inspired by Sky Force Reloaded reference: terrain stage background, red fighter, blue laser beam, orange tracers

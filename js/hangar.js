@@ -8,7 +8,13 @@ const HangarSystem = {
   },
 
   moduleIds() {
-    return Object.keys(this.config().modules);
+    const order = [
+      'hp', 'cannon', 'magnet', 'wings', 'missiles',
+      'laser', 'energy_shield', 'mega_bomb',
+    ];
+    const keys = Object.keys(this.config().modules);
+    return order.filter((id) => keys.includes(id))
+      .concat(keys.filter((id) => !order.includes(id)));
   },
 
   getLevel(save, moduleId) {
@@ -71,8 +77,8 @@ const HangarSystem = {
       cannonPattern: Math.min(4, 1 + Math.floor(cannon / 3)),
       cannonDamageBonus: Math.floor(cannon * 0.8),
       wingLevel: Math.floor(wings / 2),
-      missileSalvo: 1 + Math.floor(missiles / 2),
-      missileInterval: Math.max(1.2, 2.8 - missiles * 0.15),
+      missileSalvo: missiles > 0 ? 1 + Math.floor(missiles / 2) : 0,
+      missileInterval: missiles > 0 ? Math.max(1.2, 2.8 - missiles * 0.15) : 0,
       magnetRadius: 40 + magnet * 12,
       magnetStrength: 100 + magnet * 30,
       laserCharges: levels.laser || 0,

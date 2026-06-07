@@ -1,24 +1,29 @@
 {
   "version": 1,
-  "tuningGeneration": 2,
+  "tuningGeneration": 3,
   "bulletHellThreshold": 12,
   "safeZoneXMin": 150,
   "safeZoneXMax": 210,
-  "safeZoneYMax": 520,
+  "safeZoneYMin": 172,
+  "safeZoneYMax": 286,
   "safeAnchorX": 180,
-  "safeAnchorY": 550,
+  "safeAnchorY": 230,
   "shieldSeekPct": 60,
   "shieldPickupRange": 155,
   "weaponSeekLevel": 4,
   "weaponPickupRange": 150,
-  "threatAheadYTop": 120,
-  "threatAheadYBottom": 40,
+  "threatAheadYTop": 80,
+  "threatAheadYBottom": 220,
   "threatNearX": 76,
   "panicShieldPct": 40,
   "targets": {
     "minWave": 3,
+    "sectionsReached": 3,
+    "minRunStars": 40,
     "maxHitsPer80Turns": 12,
-    "minScore": 8000
+    "maxHits": 12,
+    "minScore": 5000,
+    "stageClear": false
   },
-  "lastTunedFrom": "run-2026-06-07T00-45-55.jsonl"
+  "lastTunedFrom": "cloud-lane-retune"
 }

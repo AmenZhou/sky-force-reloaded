@@ -40,6 +40,7 @@ const btnRetry = document.getElementById('btn-retry');
 const btnFailMenu = document.getElementById('btn-fail-menu');
 const btnClearMenu = document.getElementById('btn-clear-menu');
 const btnClearRetry = document.getElementById('btn-clear-retry');
+const btnClearNext = document.getElementById('btn-clear-next');
 const btnAbilityLaser = document.getElementById('btn-ability-laser');
 const btnAbilityShield = document.getElementById('btn-ability-shield');
 const btnAbilityBomb = document.getElementById('btn-ability-bomb');
@@ -90,6 +91,7 @@ function hideAllOverlays() {
   overlayStageMap.classList.add('hidden');
   overlayGameOver.classList.add('hidden');
   overlayStageClear.classList.add('hidden');
+  if (btnClearNext) btnClearNext.classList.add('hidden');
   abilityBar.classList.add('hidden');
   if (medalRunTrack) medalRunTrack.classList.add('hidden');
 }
@@ -118,11 +120,20 @@ function showHangarTab(tab) {
 function renderFleet() {
   if (!hangarFleet) return;
   const save = SkyForceSave.load();
+  const migrated = CollectionSystem.migrateLegacyParts(save);
+  if (migrated.converted > 0) SkyForceSave.write(save);
+  if (hangarStars) hangarStars.textContent = save.bankedStars.toLocaleString();
   hangarFleet.innerHTML = '';
+  if (migrated.converted > 0) {
+    const note = document.createElement('p');
+    note.className = 'text-amber-200/90 text-xs mb-3 px-1';
+    note.textContent = `Converted ${migrated.converted} old ship part(s) → +${migrated.stars.toLocaleString()} ★. Ships unlock with stars below — not parts.`;
+    hangarFleet.appendChild(note);
+  }
   const equipped = CollectionSystem.equippedShip(save);
   Object.values(COLLECTION_CONFIG.ships).forEach((ship) => {
     const unlocked = CollectionSystem.isShipUnlocked(save, ship.id);
-    const prog = CollectionSystem.shipPartProgress(save, ship.id);
+    const cost = CollectionSystem.shipUnlockCost(ship.id);
     const card = document.createElement('div');
     card.className = `fleet-card${equipped === ship.id ? ' equipped' : ''}${unlocked ? '' : ' locked'}`;
     card.innerHTML = `
@@ -133,8 +144,8 @@ function renderFleet() {
           <div class="fleet-tag">${ship.tagline}</div>
         </div>
       </div>
-      <div class="fleet-parts">${ship.parts?.length
-        ? `Parts ${prog.have}/${prog.need}`
+      <div class="fleet-parts">${cost > 0
+        ? (unlocked ? 'Unlocked with ★' : `Needs ${cost.toLocaleString()} ★ to unlock`)
         : 'Starter ship — always available'}</div>
     `;
     const btn = document.createElement('button');
@@ -152,8 +163,18 @@ function renderFleet() {
         renderFleet();
       });
     } else {
-      btn.textContent = 'LOCKED — FIND PARTS';
-      btn.disabled = true;
+      btn.textContent = `UNLOCK ${cost.toLocaleString()} ★`;
+      btn.disabled = save.bankedStars < cost;
+      btn.addEventListener('click', () => {
+        const s = SkyForceSave.load();
+        const result = CollectionSystem.purchaseShip(s, ship.id);
+        if (result.ok) {
+          SkyForceSave.write(s);
+          renderFleet();
+          refreshMenu();
+          if (hangarStars) hangarStars.textContent = s.bankedStars.toLocaleString();
+        }
+      });
     }
     card.appendChild(btn);
     hangarFleet.appendChild(card);
@@ -180,20 +201,26 @@ function renderAlbum() {
     `;
     hangarAlbum.appendChild(cardEl);
   });
-  const partsOwned = CollectionSystem.ownedParts(save);
-  const partsPending = save.runUnconfirmed?.parts || [];
-  if (partsOwned.length || partsPending.length) {
-    const hdr = document.createElement('p');
-    hdr.className = 'text-slate-400 text-xs mt-3 mb-1';
-    hdr.textContent = 'Ship parts';
-    hangarAlbum.appendChild(hdr);
-    [...new Set([...partsOwned, ...partsPending])].forEach((partId) => {
-      const row = document.createElement('div');
-      row.className = `album-card owned${partsPending.includes(partId) ? ' unconfirmed' : ''}`;
-      row.innerHTML = `<div class="album-name">${COLLECTION_CONFIG.partLabels[partId] || partId}</div>`;
-      hangarAlbum.appendChild(row);
-    });
+  const hint = document.createElement('p');
+  hint.className = 'text-slate-500 text-xs mt-3';
+  hint.textContent = 'Cards drop from elites and crates. Unlock ships with banked ★ in the Fleet tab — parts no longer gate ships.';
+  hangarAlbum.appendChild(hint);
+}
+
+function hangarModuleStatLine(moduleId, level) {
+  if (moduleId === 'missiles') {
+    if (level <= 0) return 'Locked — following salvos track ground targets';
+    const salvo = 1 + Math.floor(level / 2);
+    const interval = Math.max(1.2, 2.8 - level * 0.15);
+    return `${salvo} missiles every ${interval.toFixed(1)}s`;
   }
+  if (moduleId === 'wings' && level > 0) {
+    return `${Math.floor(level / 2)} side-cannon tier(s)`;
+  }
+  if (moduleId === 'magnet' && level > 0) {
+    return `${40 + level * 12}px pickup radius`;
+  }
+  return '';
 }
 
 function renderHangar() {
@@ -209,6 +236,7 @@ function renderHangar() {
     const maxed = level >= mod.maxLevel;
     const locked = mod.unlock > 0 && !HangarSystem.isModuleUnlocked(save, id) && level === 0;
 
+    const statLine = hangarModuleStatLine(id, level);
     const card = document.createElement('div');
     card.className = 'hangar-card';
     card.innerHTML = `
@@ -219,7 +247,7 @@ function renderHangar() {
           <div class="hangar-desc">${mod.desc}</div>
         </div>
       </div>
-      <div class="hangar-level">Lv ${level} / ${mod.maxLevel}</div>
+      <div class="hangar-level">Lv ${level} / ${mod.maxLevel}${statLine ? ` · ${statLine}` : ''}</div>
     `;
 
     const btn = document.createElement('button');
@@ -246,62 +274,74 @@ function renderHangar() {
   });
 }
 
+function getStageById(stageId) {
+  const key = `stage-${String(stageId).padStart(2, '0')}`;
+  return window.SKY_FORCE_STAGES?.[key] || null;
+}
+
 function renderStageMap() {
   stageMapList.innerHTML = '';
-  const stage = window.SKY_FORCE_STAGES?.['stage-01'];
-  if (!stage) return;
+  const order = window.SKY_FORCE_STAGE_ORDER || ['stage-01'];
+  order.forEach((stageKey) => {
+    const stage = window.SKY_FORCE_STAGES?.[stageKey];
+    if (!stage) return;
 
-  const card = document.createElement('div');
-  card.className = 'stage-card';
+    const locked = !SkyForceSave.isStageUnlocked(stage.id);
+    const card = document.createElement('div');
+    card.className = `stage-card${locked ? ' locked' : ''}`;
 
-  const diffRow = document.createElement('div');
-  diffRow.className = 'difficulty-row';
-  const unlocked = SkyForceSave.unlockedDifficulties(stage.id);
-  let selectedDiff = unlocked.includes(currentDifficulty) ? currentDifficulty : 'normal';
+    const diffRow = document.createElement('div');
+    diffRow.className = 'difficulty-row';
+    const unlocked = SkyForceSave.unlockedDifficulties(stage.id);
+    let selectedDiff = unlocked.includes(currentDifficulty) ? currentDifficulty : 'normal';
 
-  HANGAR_CONFIG.difficulty.order.forEach((d) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `diff-btn${d === selectedDiff ? ' active' : ''}${unlocked.includes(d) ? '' : ' locked'}`;
-    btn.textContent = HANGAR_CONFIG.difficulty.labels[d];
-    btn.disabled = !unlocked.includes(d);
-    btn.addEventListener('click', () => {
-      selectedDiff = d;
-      currentDifficulty = d;
-      renderStageMap();
+    HANGAR_CONFIG.difficulty.order.forEach((d) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `diff-btn${d === selectedDiff ? ' active' : ''}${unlocked.includes(d) ? '' : ' locked'}`;
+      btn.textContent = HANGAR_CONFIG.difficulty.labels[d];
+      btn.disabled = locked || !unlocked.includes(d);
+      btn.addEventListener('click', () => {
+        selectedDiff = d;
+        currentDifficulty = d;
+        renderStageMap();
+      });
+      diffRow.appendChild(btn);
     });
-    diffRow.appendChild(btn);
-  });
 
-  const medalRow = document.createElement('div');
-  medalRow.className = 'medal-row';
-  HANGAR_CONFIG.medals.forEach((m) => {
-    const earned = SkyForceSave.getStageMedals(stage.id, selectedDiff).includes(m.id);
-    const chip = document.createElement('span');
-    chip.className = `medal-chip${earned ? ' earned' : ''}`;
-    chip.title = m.label;
-    chip.textContent = m.short;
-    medalRow.appendChild(chip);
-  });
+    const medalRow = document.createElement('div');
+    medalRow.className = 'medal-row';
+    HANGAR_CONFIG.medals.forEach((m) => {
+      const earned = SkyForceSave.getStageMedals(stage.id, selectedDiff).includes(m.id);
+      const chip = document.createElement('span');
+      chip.className = `medal-chip${earned ? ' earned' : ''}`;
+      chip.title = m.label;
+      chip.textContent = m.short;
+      medalRow.appendChild(chip);
+    });
 
-  const launch = document.createElement('button');
-  launch.type = 'button';
-  launch.className = 'btn-launch title-font w-full py-3 rounded-xl text-sm mt-4';
-  const ship = CollectionSystem.config().ships[CollectionSystem.equippedShip(SkyForceSave.load())];
-  launch.textContent = `LAUNCH — ${stage.name.toUpperCase()} (${ship?.name || 'Enforcer'})`;
-  launch.addEventListener('click', () => {
-    currentDifficulty = selectedDiff;
-    startGame('stage', stage, stage.id, selectedDiff);
-  });
+    card.innerHTML = `
+      <h3 class="stage-card-title">${locked ? '🔒 ' : ''}${stage.name}</h3>
+      <p class="stage-card-sub">${locked ? 'Clear previous stage to unlock' : stage.subtitle}</p>
+    `;
+    card.appendChild(diffRow);
+    card.appendChild(medalRow);
 
-  card.innerHTML = `
-    <h3 class="stage-card-title">${stage.name}</h3>
-    <p class="stage-card-sub">${stage.subtitle}</p>
-  `;
-  card.appendChild(diffRow);
-  card.appendChild(medalRow);
-  card.appendChild(launch);
-  stageMapList.appendChild(card);
+    if (!locked) {
+      const launch = document.createElement('button');
+      launch.type = 'button';
+      launch.className = 'btn-launch title-font w-full py-3 rounded-xl text-sm mt-4';
+      const ship = CollectionSystem.config().ships[CollectionSystem.equippedShip(SkyForceSave.load())];
+      launch.textContent = `LAUNCH — ${stage.name.toUpperCase()} (${ship?.name || 'Enforcer'})`;
+      launch.addEventListener('click', () => {
+        currentDifficulty = selectedDiff;
+        startGame('stage', stage, stage.id, selectedDiff);
+      });
+      card.appendChild(launch);
+    }
+
+    stageMapList.appendChild(card);
+  });
 }
 
 function renderClearMedals(medalIds) {
@@ -528,11 +568,20 @@ function buildCallbacks() {
       hud.finalWave.textContent = state.mode === 'stage'
         ? (state.stageName || `Section ${state.wave}`)
         : state.wave;
+      const lootLines = [];
+      if (state.mode === 'stage' && state.runStars > 0) {
+        lootLines.push(`${state.runStars.toLocaleString()} run ★ lost — clear the stage to bank stars`);
+      } else if (state.mode === 'arcade' && state.runStars > 0) {
+        lootLines.push(`${state.runStars.toLocaleString()} run ★ (arcade — not added to bank)`);
+      }
       if (failLostLoot) {
         const lost = state.lostUnconfirmed || {};
         const n = (lost.cards?.length || 0) + (lost.parts?.length || 0);
         if (n > 0) {
-          failLostLoot.textContent = `Unconfirmed loot lost: ${lost.cards?.length || 0} card(s), ${lost.parts?.length || 0} part(s)`;
+          lootLines.push(`Unconfirmed loot lost: ${lost.cards?.length || 0} card(s), ${lost.parts?.length || 0} part(s)`);
+        }
+        if (lootLines.length) {
+          failLostLoot.textContent = lootLines.join(' · ');
           failLostLoot.classList.remove('hidden');
         } else failLostLoot.classList.add('hidden');
       }
@@ -550,9 +599,13 @@ function buildCallbacks() {
       const rescueBonus = (result.rescued || 0) * cfg.stagePayout.rescueBonus;
       const passives = CollectionSystem.aggregatePassiveEffects(SkyForceSave.load());
       const toBank = Math.round(result.runStars * starMult * passives.starBankMult) + medalBonus + rescueBonus;
-      const banked = SkyForceSave.bankRunStars(toBank);
-      SkyForceSave.recordStageMedals(result.stageId, result.difficulty, result.medals);
-      SkyForceSave.recordStageClear(result.stageId, result.score, result.difficulty);
+      const banked = SkyForceSave.completeStageRun({
+        toBank,
+        stageId: result.stageId,
+        score: result.score,
+        difficulty: result.difficulty,
+        medals: result.medals,
+      });
 
       if (hud.clearStageName) hud.clearStageName.textContent = result.stageName;
       if (hud.clearScore) hud.clearScore.textContent = result.score.toLocaleString();
@@ -563,13 +616,26 @@ function buildCallbacks() {
         const nc = result.newCards?.length || 0;
         const np = result.newParts?.length || 0;
         if (nc + np > 0) {
-          clearNewLoot.textContent = `Collection: +${nc} card(s), +${np} ship part(s) claimed!`;
+          clearNewLoot.textContent = np > 0
+            ? `Collection: +${nc} card(s), +${np} bonus item(s) claimed!`
+            : `Collection: +${nc} card(s) claimed!`;
           clearNewLoot.classList.remove('hidden');
-        } else clearNewLoot.classList.add('hidden');
+        } else {
+          clearNewLoot.textContent = 'No cards this run — destroy elite tanks & supply crates for CARD drops.';
+          clearNewLoot.classList.remove('hidden');
+        }
       }
       overlayStageClear.classList.remove('hidden');
       abilityBar.classList.add('hidden');
       if (medalRunTrack) medalRunTrack.classList.add('hidden');
+      if (btnClearNext) {
+        const nextStage = getStageById(result.stageId + 1);
+        const showNext = nextStage && SkyForceSave.isStageUnlocked(nextStage.id);
+        btnClearNext.classList.toggle('hidden', !showNext);
+        if (showNext) {
+          btnClearNext.textContent = `NEXT — ${nextStage.name.toUpperCase()}`;
+        }
+      }
       refreshMenu();
     },
   };
@@ -634,13 +700,21 @@ btnHangarBack.addEventListener('click', showMenu);
 btnStagesBack.addEventListener('click', showMenu);
 
 btnRetry.addEventListener('click', () => {
-  if (currentMode === 'stage' && currentStageId === 1) {
-    startGame('stage', window.SKY_FORCE_STAGES?.['stage-01'], 1, currentDifficulty);
+  if (currentMode === 'stage' && currentStageId) {
+    const stage = getStageById(currentStageId);
+    if (stage) startGame('stage', stage, currentStageId, currentDifficulty);
+    else startGame('arcade');
   } else startGame('arcade');
 });
 
 btnClearRetry.addEventListener('click', () => {
-  startGame('stage', window.SKY_FORCE_STAGES?.['stage-01'], 1, currentDifficulty);
+  const stage = getStageById(currentStageId || 1);
+  if (stage) startGame('stage', stage, stage.id, currentDifficulty);
+});
+
+btnClearNext?.addEventListener('click', () => {
+  const stage = getStageById((currentStageId || 1) + 1);
+  if (stage) startGame('stage', stage, stage.id, currentDifficulty);
 });
 
 btnFailMenu.addEventListener('click', showMenu);
@@ -658,6 +732,16 @@ window.__SKY_FORCE__ = {
     return {
       running: game.running,
       mode: game.mode,
+      stageId: game.stageData?.id ?? null,
+      stageName: game.stageData?.name ?? null,
+      section: game.wave,
+      sectionsReached: game.sectionsReached,
+      lastBanner: game.lastBannerText || null,
+      outcome: game.agentOutcome,
+      deathCause: game.agentDeathCause,
+      runHits: game.runHits,
+      hostagesRescued: game.hostages.rescuedCount,
+      hostagesTotal: game.hostages.totalSpawned,
       score: game.score,
       runStars: game.runStars,
       wave: game.wave,
@@ -672,6 +756,16 @@ window.__SKY_FORCE__ = {
       bossName: game.boss?.name || null,
       playerX: game.player.x,
       playerY: game.player.y,
+      canvasW: game.canvas.width,
+      canvasH: game.canvas.height,
+      flightLane: (() => {
+        const lane = Player.laneFor(game.canvas.height);
+        return {
+          top: Math.round(lane.top),
+          bottom: Math.round(lane.bottom),
+          center: Math.round(lane.center),
+        };
+      })(),
       enemyBullets: game.bullets.enemyBullets.map((b) => ({
         x: Math.round(b.x), y: Math.round(b.y), vx: Math.round(b.vx), vy: Math.round(b.vy),
       })),
@@ -688,5 +782,13 @@ window.__SKY_FORCE__ = {
     };
   },
   startArcade: () => startGame('arcade'),
-  startStage1: (diff = 'normal') => startGame('stage', window.SKY_FORCE_STAGES?.['stage-01'], 1, diff),
+  startStage: (stageId = 1, diff = 'normal') => {
+    const stage = getStageById(stageId);
+    if (stage) startGame('stage', stage, stage.id, diff);
+  },
+  startStage1: (diff = 'normal') => startGame('stage', getStageById(1), 1, diff),
+  startStage2: (diff = 'normal') => startGame('stage', getStageById(2), 2, diff),
+  startStage3: (diff = 'normal') => startGame('stage', getStageById(3), 3, diff),
+  startStage4: (diff = 'normal') => startGame('stage', getStageById(4), 4, diff),
+  startStage5: (diff = 'normal') => startGame('stage', getStageById(5), 5, diff),
 };

@@ -21,20 +21,59 @@ const CollectionSystem = {
     return save.equippedShip || 'enforcer';
   },
 
-  isShipUnlocked(save, shipId) {
-    const ship = this.config().ships[shipId];
-    if (!ship) return false;
-    if (ship.unlockedByDefault) return true;
-    const parts = ship.parts || [];
-    return parts.every((p) => (save.collection?.parts || []).includes(p));
+  ensureUnlockedShips(save) {
+    if (!Array.isArray(save.unlockedShips)) {
+      save.unlockedShips = ['enforcer'];
+    }
+    if (!save.unlockedShips.includes('enforcer')) {
+      save.unlockedShips.unshift('enforcer');
+    }
   },
 
-  shipPartProgress(save, shipId) {
+  isShipUnlocked(save, shipId) {
+    this.ensureUnlockedShips(save);
     const ship = this.config().ships[shipId];
-    if (!ship || !ship.parts?.length) return { have: 0, need: 0 };
-    const owned = new Set(save.collection?.parts || []);
-    const have = ship.parts.filter((p) => owned.has(p)).length;
-    return { have, need: ship.parts.length, parts: ship.parts };
+    if (!ship) return false;
+    if (ship.unlockedByDefault || (ship.unlockStars ?? 0) <= 0) return true;
+    return save.unlockedShips.includes(shipId);
+  },
+
+  shipUnlockCost(shipId) {
+    const ship = this.config().ships[shipId];
+    if (!ship || ship.unlockedByDefault) return 0;
+    return ship.unlockStars ?? 0;
+  },
+
+  purchaseShip(save, shipId) {
+    this.ensureUnlockedShips(save);
+    const ship = this.config().ships[shipId];
+    if (!ship || ship.unlockedByDefault) return { ok: false, reason: 'default' };
+    if (this.isShipUnlocked(save, shipId)) return { ok: false, reason: 'owned' };
+    const cost = this.shipUnlockCost(shipId);
+    if (save.bankedStars < cost) return { ok: false, reason: 'stars', cost };
+    save.bankedStars -= cost;
+    save.unlockedShips.push(shipId);
+    return { ok: true, cost };
+  },
+
+  /** Old save: ship parts no longer gate fleet — convert once to ★ so prior runs count. */
+  migrateLegacyParts(save) {
+    if (save._partsConvertedToStars) return { converted: 0, stars: 0 };
+    const parts = [...(save.collection?.parts || [])];
+    const pending = [...(save.runUnconfirmed?.parts || [])];
+    const total = parts.length + pending.length;
+    if (total <= 0) {
+      save._partsConvertedToStars = true;
+      return { converted: 0, stars: 0 };
+    }
+    const stars = total * 400;
+    save.bankedStars += stars;
+    save.collection = save.collection || { cards: [], parts: [] };
+    save.collection.parts = [];
+    save.runUnconfirmed = save.runUnconfirmed || { cards: [], parts: [] };
+    save.runUnconfirmed.parts = [];
+    save._partsConvertedToStars = true;
+    return { converted: total, stars };
   },
 
   rollCardDrop(source, luckMult = 1) {
@@ -166,6 +205,7 @@ const CollectionSystem = {
       luckMult: m.luckMult || 1,
       ramDamageMult: m.ramDamageMult || 1,
       missileSwarm: !!m.missileSwarm,
+      intrinsicMissileSalvo: m.missileSwarm ? 2 : 0,
       cannonSpreadTight: !!m.cannonSpreadTight,
       shipId: ship.id,
       shipName: ship.name,

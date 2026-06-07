@@ -25,8 +25,8 @@ export function tuneFromMetrics(cfg, metrics) {
 
   if (metrics.finalScore < t.minScore && metrics.hitsTaken <= t.maxHitsPer80Turns) {
     next.weaponPickupRange = clamp(next.weaponPickupRange + 10, 80, 220);
-    next.safeAnchorY = clamp(next.safeAnchorY - 10, 480, 580);
-    notes.push('low score but safe → push forward for kills');
+    next.safeAnchorY = clamp(next.safeAnchorY - 6, 200, 260);
+    notes.push('low score but safe → tighten cruise altitude for kills');
   }
 
   if (metrics.maxBullets > 18 && metrics.hitsTaken > t.maxHitsPer80Turns) {

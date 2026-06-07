@@ -9,7 +9,7 @@ class WaveBoss {
     this.y = y;
     this.w = w;
     this.wave = wave;
-    this.radius = 36;
+    this.radius = options.radius ?? 36;
     const defaultHp = options.stageBoss ? 4200 : 2000 + wave * 90;
     this.maxHp = options.maxHp ?? defaultHp;
     this.hp = this.maxHp;
@@ -22,6 +22,9 @@ class WaveBoss {
     this.stageBoss = !!options.stageBoss;
     this.rageFlash = 0;
     this.fireScale = options.fireScale ?? 1;
+    this.bossType = options.bossType || 'debris-core';
+    this.grounded = !!options.grounded;
+    this.groundY = options.groundY ?? y;
   }
 
   get hpPct() {
@@ -32,7 +35,11 @@ class WaveBoss {
     if (!this.alive) return;
     this.swayT += dt;
     this.x = this.w / 2 + Math.sin(this.swayT * 0.85) * (this.w * 0.26);
-    this.y = 95 + Math.sin(this.swayT * 0.45) * 14;
+    if (this.grounded) {
+      this.y = this.groundY + Math.sin(this.swayT * 0.45) * 5;
+    } else {
+      this.y = 95 + Math.sin(this.swayT * 0.45) * 14;
+    }
 
     if (this.hp / this.maxHp <= 0.5 && this.phase === 1) {
       this.phase = 2;
@@ -113,22 +120,36 @@ class WaveBoss {
     }
 
     ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = this.phase === 2 ? '#ef4444' : '#fb923c';
+    ctx.strokeStyle = this.bossType === 'dreadnought'
+      ? (this.phase === 2 ? '#dc2626' : '#64748b')
+      : (this.phase === 2 ? '#ef4444' : '#fb923c');
     ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let i = 0; i < 8; i += 1) {
-      const a = (i / 8) * Math.PI * 2;
-      const r = i % 2 === 0 ? this.radius : this.radius * 0.72;
-      const px = Math.cos(a) * r;
-      const py = Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    if (this.bossType === 'dreadnought') {
+      ctx.rect(-this.radius, -this.radius * 0.75, this.radius * 2, this.radius * 1.5);
+    } else {
+      for (let i = 0; i < 8; i += 1) {
+        const a = (i / 8) * Math.PI * 2;
+        const r = i % 2 === 0 ? this.radius : this.radius * 0.72;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
     }
-    ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = this.phase === 2 ? '#ef4444' : '#fbbf24';
+    if (this.bossType === 'dreadnought') {
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(-this.radius * 0.85, this.radius * 0.35, this.radius * 0.35, this.radius * 0.25);
+      ctx.fillRect(this.radius * 0.5, this.radius * 0.35, this.radius * 0.35, this.radius * 0.25);
+    }
+
+    ctx.fillStyle = this.bossType === 'dreadnought'
+      ? (this.phase === 2 ? '#ef4444' : '#64748b')
+      : (this.phase === 2 ? '#ef4444' : '#fbbf24');
     ctx.beginPath();
     ctx.arc(0, 0, this.radius * 0.35, 0, Math.PI * 2);
     ctx.fill();

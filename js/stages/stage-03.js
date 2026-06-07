@@ -1,0 +1,67 @@
+/** Stage 3 — Iron Valley (mirrors data/stages/stage-03.json). */
+window.SKY_FORCE_STAGES = window.SKY_FORCE_STAGES || {};
+window.SKY_FORCE_STAGES['stage-03'] = {
+  id: 3,
+  name: 'Iron Valley',
+  subtitle: 'Sector 19 — Mountain pass',
+  theme: 'terrain',
+  hostageCount: 3,
+  unlockStars: 0,
+  difficultyMultipliers: {
+    normal: { enemyHp: 1.28, bulletSpeed: 1.08, starReward: 1.15 },
+  },
+  timeline: [
+    { atSec: 0, action: 'banner', text: 'SECTOR 19 — IRON VALLEY', kind: 'stage' },
+    { atSec: 0, action: 'setSection', section: 1 },
+    { atSec: 4, action: 'banner', text: 'RIDGE DEFENSES', kind: 'wave' },
+    { atSec: 5, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.18, y: 0.69 },
+      { type: 'turret', x: 0.82, y: 0.71 },
+      { type: 'tank', x: 0.5, y: 0.74 },
+    ] },
+    { atSec: 10, action: 'spawnDestructible', destructible: 'radar', x: 0.35, y: 0.77 },
+    { atSec: 12, action: 'spawnDestructible', destructible: 'crate', x: 0.65, y: 0.75 },
+    { atSec: 16, action: 'spawnHostage', id: 'h1', x: 0.28, y: 0.58 },
+    { atSec: 20, action: 'spawnGroup', enemies: [
+      { type: 'tank', x: 0.25, y: 0.72 },
+      { type: 'tank', x: 0.75, y: 0.7 },
+      { type: 'turret', x: 0.5, y: 0.76 },
+    ] },
+    { atSec: 26, action: 'setSection', section: 2 },
+    { atSec: 26, action: 'banner', text: 'CONVOY STRIKE', kind: 'wave' },
+    { atSec: 28, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.3, y: 0.68 },
+      { type: 'turret', x: 0.7, y: 0.68 },
+      { type: 'tank', x: 0.4, y: 0.75, elite: true },
+      { type: 'tank', x: 0.6, y: 0.75 },
+    ] },
+    { atSec: 34, action: 'spawnHostage', id: 'h2', x: 0.62, y: 0.6 },
+    { atSec: 38, action: 'spawnDestructible', destructible: 'fuel', x: 0.2, y: 0.78 },
+    { atSec: 40, action: 'spawnDestructible', destructible: 'fuel', x: 0.8, y: 0.76 },
+    { atSec: 44, action: 'spawnGroup', enemies: [
+      { type: 'turret', x: 0.15, y: 0.72 },
+      { type: 'turret', x: 0.85, y: 0.72 },
+      { type: 'tank', x: 0.5, y: 0.77 },
+    ] },
+    { atSec: 50, action: 'setSection', section: 3 },
+    { atSec: 50, action: 'banner', text: 'VALLEY AMBUSH', kind: 'wave' },
+    { atSec: 52, action: 'spawnHostage', id: 'h3', x: 0.45, y: 0.57 },
+    { atSec: 54, action: 'spawnGroup', enemies: [
+      { type: 'tank', x: 0.22, y: 0.71 },
+      { type: 'tank', x: 0.78, y: 0.71 },
+      { type: 'turret', x: 0.35, y: 0.76 },
+      { type: 'turret', x: 0.65, y: 0.76 },
+      { type: 'tank', x: 0.5, y: 0.78, elite: true },
+    ] },
+    { atSec: 60, action: 'spawnDestructible', destructible: 'radar', x: 0.5, y: 0.79 },
+    { atSec: 64, action: 'setSection', section: 4 },
+    { atSec: 64, action: 'banner', text: 'BUNKER CORE', kind: 'boss' },
+    { atSec: 68, action: 'spawnBoss', type: 'debris-core', hp: 5800, name: 'BUNKER CORE', fireScale: 1.08 },
+  ],
+  medals: {
+    annihilation70: { threshold: 0.7 },
+    annihilation100: { threshold: 1 },
+    rescueAll: { survivorIds: [] },
+  },
+  clearBonusStars: 90,
+};

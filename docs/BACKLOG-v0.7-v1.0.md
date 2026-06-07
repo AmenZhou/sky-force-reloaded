@@ -52,15 +52,15 @@ Priority: **P0** (next sprint) → **P1** (v0.8–0.9) → **P2** (v1.0 polish) 
 
 ---
 
-### SKY-705 — Stage 2 skeleton (“Fleet Assault”)
+### SKY-705 — Stage 2 skeleton (“Fleet Assault”) ✅
 
 **Description:** `data/stages/stage-02.json` + stage map unlock after Stage 1 clear; new BG tint; one boss.  
 **Acceptance criteria:**
-- [ ] Stage 2 appears on map when Stage 1 cleared once
-- [ ] JSON timeline only (no random spawns in campaign)
-- [ ] Distinct banner subtitle + boss name
+- [x] Stage 2 appears on map when Stage 1 cleared once
+- [x] JSON timeline only (no random spawns in campaign)
+- [x] Distinct banner subtitle + boss name
 
-**Design:** See GDD §8 — turret-heavy formations (use fighter/tank placeholders until SKY-806).
+**Design:** See GDD §8 — turret-heavy formations (turrets implemented; see SKY-803).
 
 ---
 
@@ -83,13 +83,13 @@ Priority: **P0** (next sprint) → **P1** (v0.8–0.9) → **P2** (v1.0 polish) 
 
 ---
 
-### SKY-803 — Turret enemy type
+### SKY-803 — Turret enemy type ✅ (MVP)
 
 **Description:** Fixed-position shooter in stage scripts; slower scroll, burst fire.  
 **Acceptance criteria:**
-- [ ] `type: "turret"` in JSON spawn
-- [ ] Distinct silhouette + HP bar
-- [ ] Used in Stage 2+ formations
+- [x] `type: "turret"` in JSON spawn
+- [x] Distinct silhouette + HP bar
+- [x] Used in Stage 2+ formations
 
 ---
 

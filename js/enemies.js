@@ -26,7 +26,7 @@ const TYPES = {
   tank: {
     hp: 55,
     radius: 22,
-    speed: 45,
+    speed: 28,
     points: 500,
     color: '#ef4444',
     accent: '#78716c',
@@ -34,6 +34,7 @@ const TYPES = {
     dropType: 'weapon',
     fireRate: 0,
     label: 'TANK',
+    grounded: true,
   },
   diver: {
     hp: 16,
@@ -47,14 +48,34 @@ const TYPES = {
     fireRate: 0,
     label: 'DIVER',
   },
+  turret: {
+    hp: 40,
+    radius: 18,
+    speed: 20,
+    points: 320,
+    color: '#64748b',
+    accent: '#94a3b8',
+    dropChance: 0.2,
+    dropType: 'shield',
+    fireRate: 0,
+    label: 'TURRET',
+    grounded: true,
+  },
 };
+
+function isGroundUnit(enemy) {
+  const t = TYPES[enemy.type];
+  return !!(t?.grounded || enemy.type === 'turret' || enemy.type === 'tank');
+}
 
 function makeEnemy(typeKey, x, y, wave, opts = {}) {
   const t = TYPES[typeKey];
   const bal = window.ENEMY_BALANCE || {};
+  if (!t) return null;
   let fireRate = t.fireRate;
   if (typeKey === 'fighter') fireRate = bal.fighterFireRate ?? 2.65;
   if (typeKey === 'tank') fireRate = bal.tankFireRate ?? 3.35;
+  if (typeKey === 'turret') fireRate = bal.turretFireRate ?? 3.1;
   const enemy = {
     type: typeKey,
     x,
@@ -70,6 +91,7 @@ function makeEnemy(typeKey, x, y, wave, opts = {}) {
     dropChance: t.dropChance,
     dropType: t.dropType,
     fireRate,
+    grounded: !!t.grounded,
     fireTimer: Math.random() * 2,
     sway: Math.random() * Math.PI * 2,
     vx: opts.vx || 0,
@@ -137,6 +159,23 @@ function drawFighter(ctx, e) {
   ctx.fillRect(e.radius * 0.6, -e.radius * 0.1, e.radius * 0.45, 4);
 }
 
+function drawDiver(ctx, e) {
+  ctx.fillStyle = e.color;
+  ctx.strokeStyle = e.accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, e.radius * 1.1);
+  ctx.lineTo(e.radius * 0.7, -e.radius * 0.3);
+  ctx.lineTo(0, -e.radius);
+  ctx.lineTo(-e.radius * 0.7, -e.radius * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = e.accent;
+  ctx.fillRect(-e.radius * 1.2, 0, e.radius * 0.5, 3);
+  ctx.fillRect(e.radius * 0.7, 0, e.radius * 0.5, 3);
+}
+
 function drawTank(ctx, e) {
   const w = e.radius * 1.1;
   const h = e.radius * 0.65;
@@ -155,21 +194,25 @@ function drawTank(ctx, e) {
   ctx.fillRect(-3, -h * 1.2, 6, h * 0.5);
 }
 
-function drawDiver(ctx, e) {
+function drawTurret(ctx, e) {
+  const w = e.radius * 1.15;
+  const h = e.radius * 0.55;
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(-w, -h * 0.15, w * 2, h * 1.1);
   ctx.fillStyle = e.color;
+  ctx.fillRect(-w * 0.75, -h * 0.85, w * 1.5, h * 0.95);
   ctx.strokeStyle = e.accent;
   ctx.lineWidth = 2;
+  ctx.strokeRect(-w * 0.75, -h * 0.85, w * 1.5, h * 0.95);
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(-4, -h * 1.35, 8, h * 0.55);
+  ctx.fillStyle = '#ef4444';
   ctx.beginPath();
-  ctx.moveTo(0, e.radius * 1.1);
-  ctx.lineTo(e.radius * 0.7, -e.radius * 0.3);
-  ctx.lineTo(0, -e.radius);
-  ctx.lineTo(-e.radius * 0.7, -e.radius * 0.3);
-  ctx.closePath();
+  ctx.arc(0, -h * 1.15, 5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = e.accent;
-  ctx.fillRect(-e.radius * 1.2, 0, e.radius * 0.5, 3);
-  ctx.fillRect(e.radius * 0.7, 0, e.radius * 0.5, 3);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(-w * 0.9, h * 0.35, w * 0.35, h * 0.35);
+  ctx.fillRect(w * 0.55, h * 0.35, w * 0.35, h * 0.35);
 }
 
 class EnemyManager {
@@ -188,6 +231,7 @@ class EnemyManager {
 
   spawn(type, x, y, wave, opts = {}) {
     const enemy = makeEnemy(type, x, y, wave, opts);
+    if (!enemy) return null;
     if (opts.difficultyHpMult) {
       enemy.hp = Math.round(enemy.hp * opts.difficultyHpMult);
       enemy.maxHp = enemy.hp;
@@ -210,11 +254,16 @@ class EnemyManager {
 
     for (const e of this.list) {
       if (!e.alive) continue;
-      e.y += e.speed * dt + drift * dt;
-      if (e.type === 'diver') {
-        e.x += e.vx * dt;
+      if (isGroundUnit(e)) {
+        e.y += (e.speed * 0.35 + drift) * dt;
+        e.x += Math.sin(e.sway + e.y * 0.006) * (e.type === 'tank' ? 14 : 9) * dt;
       } else {
-        e.x += Math.sin(e.sway + e.y * 0.02) * 30 * dt;
+        e.y += e.speed * dt + drift * dt;
+        if (e.type === 'diver') {
+          e.x += e.vx * dt;
+        } else {
+          e.x += Math.sin(e.sway + e.y * 0.02) * 30 * dt;
+        }
       }
       e.fireTimer -= dt;
     }
@@ -222,34 +271,34 @@ class EnemyManager {
     this.list = this.list.filter((e) => e.alive && e.y < this.h + 40);
   }
 
+  _spawnGround(type, xNorm, wave, opts = {}) {
+    const x = xNorm * this.w;
+    const y = this.h * (0.62 + Math.random() * 0.1);
+    this.list.push(makeEnemy(type, x, y, wave, opts));
+  }
+
   _spawnWave(wave) {
     const pattern = Math.floor(Math.random() * 4);
     if (pattern === 0) {
-      const count = 3 + Math.min(wave, 5);
-      const spacing = this.w / (count + 1);
-      for (let i = 1; i <= count; i += 1) {
-        this.list.push(makeEnemy('scout', spacing * i, -30 - i * 20, wave));
-      }
+      this._spawnGround('turret', 0.22, wave);
+      this._spawnGround('turret', 0.78, wave);
     } else if (pattern === 1) {
-      this.list.push(makeEnemy('fighter', this.w * 0.25, -40, wave));
-      this.list.push(makeEnemy('fighter', this.w * 0.75, -40, wave));
-      if (wave >= 3) this.list.push(makeEnemy('tank', this.w * 0.5, -80, wave));
+      this._spawnGround('tank', 0.5, wave);
+      this._spawnGround('turret', 0.35, wave);
+      this._spawnGround('turret', 0.65, wave);
     } else if (pattern === 2) {
-      for (let i = 0; i < 5; i += 1) {
-        const x = 40 + (this.w - 80) * (i / 4);
-        this.list.push(makeEnemy(i % 2 ? 'scout' : 'fighter', x, -20 - i * 35, wave));
-      }
+      const slots = [0.18, 0.42, 0.58, 0.82];
+      slots.forEach((slot, i) => {
+        this._spawnGround(i % 2 === 0 ? 'tank' : 'turret', slot, wave);
+      });
     } else {
-      const slots = [0.15, 0.35, 0.65, 0.85];
-      for (const slot of slots) {
-        const x = this.w * slot;
-        const vx = (this.w / 2 - x) * 0.55;
-        this.list.push(makeEnemy('diver', x, -25, wave, { vx }));
-      }
+      this._spawnGround('tank', 0.28, wave);
+      this._spawnGround('tank', 0.72, wave);
+      this._spawnGround('turret', 0.5, wave);
     }
 
-    if (wave >= 2 && wave % 3 === 0) {
-      this.list.push(makeEnemy('fighter', this.w * 0.5, -60, wave, { elite: true }));
+    if (wave >= 3 && wave % 4 === 0) {
+      this._spawnGround('tank', 0.5, wave, { elite: true });
     }
   }
 
@@ -260,7 +309,10 @@ class EnemyManager {
     for (const e of this.list) {
       if (shots >= maxShots) break;
       if (!e.alive || e.fireRate <= 0 || e.fireTimer > 0) continue;
-      if (e.y < 40 || e.y > this.h * 0.65) continue;
+      if (bal.groundShootersOnly && !isGroundUnit(e)) continue;
+      if (isGroundUnit(e)) {
+        if (e.y < this.h * 0.42 || e.y > this.h * 0.9) continue;
+      } else if (e.y < 40 || e.y > this.h * 0.65) continue;
       if (Math.random() < (bal.fireSkipChance ?? 0)) continue;
       e.fireTimer = e.fireRate;
       shots += 1;
@@ -280,9 +332,21 @@ class EnemyManager {
     this.list = this.list.filter((e) => e.alive);
   }
 
-  draw(ctx) {
+  draw(ctx, opts = {}) {
+    const horizonY = opts.horizonY;
     for (const e of this.list) {
       if (!e.alive) continue;
+      if (horizonY != null && isGroundUnit(e)) {
+        ctx.save();
+        const drop = Math.max(0, e.y - horizonY + 10);
+        ctx.translate(e.x, horizonY + 6 + drop * 0.08);
+        ctx.scale(1 + drop * 0.0012, 0.4);
+        ctx.fillStyle = `rgba(15, 23, 42, ${Math.max(0.1, 0.32 - drop * 0.0004)})`;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, e.radius + 4, e.radius * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       ctx.save();
       ctx.translate(e.x, e.y);
 
@@ -292,6 +356,7 @@ class EnemyManager {
       if (e.type === 'scout') drawScout(ctx, e);
       else if (e.type === 'fighter') drawFighter(ctx, e);
       else if (e.type === 'diver') drawDiver(ctx, e);
+      else if (e.type === 'turret') drawTurret(ctx, e);
       else drawTank(ctx, e);
 
       ctx.shadowBlur = 0;
@@ -317,10 +382,10 @@ class EnemyManager {
         }
       }
 
-      const barW = e.type === 'tank' ? 40 : e.type === 'fighter' ? 32 : 24;
+      const barW = e.type === 'tank' ? 40 : e.type === 'turret' ? 36 : e.type === 'fighter' ? 32 : 24;
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.fillRect(-barW / 2, -e.radius - 14, barW, 4);
-      ctx.fillStyle = e.type === 'tank' ? '#f87171' : e.type === 'fighter' ? '#c084fc' : '#fdba74';
+      ctx.fillStyle = e.type === 'tank' ? '#f87171' : e.type === 'turret' ? '#94a3b8' : e.type === 'fighter' ? '#c084fc' : '#fdba74';
       ctx.fillRect(-barW / 2, -e.radius - 14, barW * hpPct, 4);
 
       if (e.type !== 'scout') {
