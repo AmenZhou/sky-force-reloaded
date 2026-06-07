@@ -182,6 +182,16 @@ class EnemyManager {
     this.spawnPaused = paused;
   }
 
+  spawn(type, x, y, wave, opts = {}) {
+    const enemy = makeEnemy(type, x, y, wave, opts);
+    if (opts.hpMult && opts.hpMult !== 1) {
+      enemy.hp = Math.round(enemy.hp * opts.hpMult);
+      enemy.maxHp = enemy.hp;
+    }
+    this.list.push(enemy);
+    return enemy;
+  }
+
   update(dt, wave, drift) {
     if (!this.spawnPaused) {
       this.spawnTimer -= dt;

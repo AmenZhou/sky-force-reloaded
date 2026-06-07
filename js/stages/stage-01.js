@@ -1,0 +1,50 @@
+/** Stage 1 data — mirrored in data/stages/stage-01.json (file:// safe, no fetch). */
+window.SKY_FORCE_STAGES = window.SKY_FORCE_STAGES || {};
+window.SKY_FORCE_STAGES['stage-01'] = {
+  id: 1,
+  name: 'Orbital Debris',
+  subtitle: 'Sector 07',
+  unlockStars: 0,
+  difficultyMultipliers: {
+    normal: { enemyHp: 1, bulletSpeed: 1, starReward: 1 },
+  },
+  timeline: [
+    { atSec: 0, action: 'banner', text: 'SECTOR 07', kind: 'stage' },
+    { atSec: 0, action: 'setSection', section: 1 },
+    { atSec: 3, action: 'spawnGroup', enemies: [
+      { type: 'scout', x: 0.18, y: -0.04 },
+      { type: 'scout', x: 0.38, y: -0.08 },
+      { type: 'scout', x: 0.58, y: -0.04 },
+      { type: 'scout', x: 0.78, y: -0.08 },
+    ] },
+    { atSec: 12, action: 'setSection', section: 2 },
+    { atSec: 12, action: 'banner', text: 'HOSTILE FIGHTERS', kind: 'wave' },
+    { atSec: 14, action: 'spawnGroup', enemies: [
+      { type: 'fighter', x: 0.25, y: -0.05 },
+      { type: 'fighter', x: 0.75, y: -0.05 },
+    ] },
+    { atSec: 22, action: 'spawn', enemy: 'scout', x: 0.5, y: -0.06, elite: true },
+    { atSec: 28, action: 'setSection', section: 3 },
+    { atSec: 28, action: 'banner', text: 'DIVE SQUADRON', kind: 'wave' },
+    { atSec: 30, action: 'spawnGroup', enemies: [
+      { type: 'diver', x: 0.12, y: -0.03, vx: 55 },
+      { type: 'diver', x: 0.88, y: -0.03, vx: -55 },
+      { type: 'diver', x: 0.35, y: -0.1, vx: 35 },
+      { type: 'diver', x: 0.65, y: -0.1, vx: -35 },
+    ] },
+    { atSec: 40, action: 'spawnGroup', enemies: [
+      { type: 'fighter', x: 0.3, y: -0.05 },
+      { type: 'fighter', x: 0.7, y: -0.05 },
+      { type: 'tank', x: 0.5, y: -0.12 },
+    ] },
+    { atSec: 52, action: 'setSection', section: 4 },
+    { atSec: 52, action: 'banner', text: 'BOSS INCOMING', kind: 'boss' },
+    { atSec: 55, action: 'spawnBoss', type: 'debris-core', hp: 4200, name: 'DEBRIS CORE' },
+  ],
+  medals: {
+    annihilation70: { threshold: 0.7 },
+    annihilation100: { threshold: 1 },
+    rescueAll: { survivorIds: [] },
+  },
+  clearBonusStars: 50,
+};

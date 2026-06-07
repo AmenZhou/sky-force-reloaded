@@ -1,23 +1,27 @@
 /**
- * Wave boss — spawns every 5 waves in arcade mode.
- * Two phases: aimed fan → faster spiral burst.
+ * Wave / stage boss — two phases: aimed fan → faster spiral burst.
+ * Tuned for ~12–15s TTK at weapon Lv 3 (human pace); Lv 4 clears faster.
  */
 class WaveBoss {
-  constructor(x, y, wave, w) {
-    this.name = 'DEBRIS CORE';
+  constructor(x, y, wave, w, options = {}) {
+    this.name = options.name || 'DEBRIS CORE';
     this.x = x;
     this.y = y;
     this.w = w;
     this.wave = wave;
     this.radius = 36;
-    this.maxHp = 520 + wave * 90;
+    const defaultHp = options.stageBoss ? 4200 : 2000 + wave * 90;
+    this.maxHp = options.maxHp ?? defaultHp;
     this.hp = this.maxHp;
     this.alive = true;
     this.isBoss = true;
     this.phase = 1;
-    this.fireTimer = 1.2;
+    this.fireTimer = 1.4;
     this.swayT = 0;
-    this.points = 2500;
+    this.points = options.stageBoss ? 5000 : 2500;
+    this.stageBoss = !!options.stageBoss;
+    this.rageFlash = 0;
+    this.fireScale = options.fireScale ?? 1;
   }
 
   get hpPct() {
@@ -27,26 +31,29 @@ class WaveBoss {
   update(dt, bulletPool, player, wave) {
     if (!this.alive) return;
     this.swayT += dt;
-    this.x = this.w / 2 + Math.sin(this.swayT * 0.9) * (this.w * 0.28);
-    this.y = 95 + Math.sin(this.swayT * 0.5) * 12;
+    this.x = this.w / 2 + Math.sin(this.swayT * 0.85) * (this.w * 0.26);
+    this.y = 95 + Math.sin(this.swayT * 0.45) * 14;
 
     if (this.hp / this.maxHp <= 0.5 && this.phase === 1) {
       this.phase = 2;
-      this.fireTimer = 0.3;
+      this.fireTimer = 0.65;
+      this.rageFlash = 0.5;
     }
+
+    if (this.rageFlash > 0) this.rageFlash -= dt;
 
     this.fireTimer -= dt;
     if (this.fireTimer > 0) return;
 
-    const interval = this.phase === 1 ? 1.1 : 0.55;
+    const interval = (this.phase === 1 ? 0.95 : 0.48) / this.fireScale;
     this.fireTimer = interval;
-    const damage = 7 + Math.max(0, wave - 2);
-    const speed = Math.min(210, 165 + wave * 2);
+    const damage = (7 + Math.max(0, wave - 2)) * (this.phase === 2 ? 1.15 : 1);
+    const speed = Math.min(215, 158 + wave * 2 + (this.phase === 2 ? 12 : 0));
 
     if (this.phase === 1) {
-      const count = 5;
+      const count = 7;
       for (let i = 0; i < count; i += 1) {
-        const angle = -Math.PI / 2 + ((i / (count - 1)) - 0.5) * 0.9;
+        const angle = -Math.PI / 2 + ((i / (count - 1)) - 0.5) * 1.05;
         bulletPool.spawnEnemyBullet(
           this.x,
           this.y + this.radius,
@@ -56,18 +63,25 @@ class WaveBoss {
         );
       }
     } else {
-      const arms = 8;
-      const base = this.swayT * 2.4;
+      const arms = 10;
+      const base = this.swayT * 2.8;
       for (let i = 0; i < arms; i += 1) {
         const angle = base + (i / arms) * Math.PI * 2;
         bulletPool.spawnEnemyBullet(
           this.x,
           this.y,
-          Math.cos(angle) * speed * 0.85,
-          Math.sin(angle) * speed * 0.85,
+          Math.cos(angle) * speed * 0.88,
+          Math.sin(angle) * speed * 0.88,
           damage,
         );
       }
+      bulletPool.spawnEnemyBullet(
+        this.x,
+        this.y + this.radius,
+        (player.x - this.x) * 0.6,
+        200,
+        damage + 1,
+      );
     }
   }
 
@@ -85,11 +99,16 @@ class WaveBoss {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 18;
+    if (this.rageFlash > 0) {
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 28;
+    } else {
+      ctx.shadowColor = '#f97316';
+      ctx.shadowBlur = 18;
+    }
 
     ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = '#fb923c';
+    ctx.strokeStyle = this.phase === 2 ? '#ef4444' : '#fb923c';
     ctx.lineWidth = 3;
     ctx.beginPath();
     for (let i = 0; i < 8; i += 1) {

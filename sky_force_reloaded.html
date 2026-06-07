@@ -26,7 +26,7 @@
         <span id="hud-stars" class="value">0</span>
       </div>
       <div class="stat-chip wave">
-        <span class="label">Wave</span>
+        <span id="hud-wave-label" class="label">Wave</span>
         <span id="hud-wave" class="value">1</span>
       </div>
       <div class="stat-chip lives">
@@ -67,16 +67,36 @@
         <h1 class="title-font hero-title text-4xl md:text-5xl font-black mb-3 leading-tight">
           SKY FORCE
         </h1>
-        <p class="subtitle-glow text-sm md:text-base mb-6">Vertical shoot-em-up inspired by Sky Force Reloaded</p>
-        <ul class="control-list text-left text-slate-300 text-sm space-y-2 mb-8 inline-block">
+        <p class="subtitle-glow text-sm md:text-base mb-4">Vertical shoot-em-up inspired by Sky Force Reloaded</p>
+        <p class="text-amber-300/90 text-sm mb-6">Bank: <span id="menu-banked-stars">0</span> ★</p>
+        <div class="mode-select flex flex-col gap-3 mb-6 pointer-events-auto">
+          <button id="btn-stage-1" class="btn-launch title-font px-8 py-3 rounded-xl text-sm tracking-wider">
+            STAGE 1 — ORBITAL DEBRIS
+          </button>
+          <button id="btn-arcade" class="btn-secondary title-font px-8 py-3 rounded-xl text-sm tracking-wider">
+            ARCADE — ENDLESS
+          </button>
+        </div>
+        <ul class="control-list text-left text-slate-300 text-sm space-y-2 mb-4 inline-block">
           <li><kbd class="key">← →</kbd> <kbd class="key">A D</kbd> <span class="text-slate-400">move</span></li>
           <li><span class="text-cyan-300">▸</span> Auto-fire — dodge &amp; collect <span class="text-amber-300">★</span></li>
           <li><span class="text-violet-300">▸</span> Touch: drag to move · release finger = slow-mo</li>
           <li><span class="text-emerald-300">▸</span> Watch <strong>Shield bar</strong> + <strong>♥ lives</strong> when hit</li>
         </ul>
-        <button id="btn-start" class="btn-launch title-font px-10 py-3.5 rounded-xl pointer-events-auto">
-          LAUNCH
-        </button>
+      </div>
+    </div>
+
+    <div id="overlay-stage-clear" class="hidden absolute inset-0 flex items-center justify-center bg-slate-950/75 backdrop-blur-md z-30">
+      <div class="overlay-panel success text-center px-8 py-8 mx-4 max-w-md">
+        <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-400/80 mb-2">Stage Clear</p>
+        <h2 id="clear-stage-name" class="title-font text-2xl md:text-3xl font-black mb-3 text-emerald-300">Orbital Debris</h2>
+        <p class="final-stat mb-1">Score: <span id="clear-score" class="highlight">0</span></p>
+        <p class="text-slate-400 text-sm mb-1">Run stars: <span id="clear-run-stars" class="text-amber-300">0</span> ★</p>
+        <p class="text-slate-400 text-sm mb-6">Banked total: <span id="clear-banked-stars" class="text-amber-300">0</span> ★</p>
+        <div class="flex flex-col gap-2 pointer-events-auto">
+          <button id="btn-clear-menu" class="btn-launch title-font px-8 py-3 rounded-xl text-sm">MENU</button>
+          <button id="btn-clear-retry" class="btn-secondary title-font px-8 py-3 rounded-xl text-sm">REPLAY STAGE</button>
+        </div>
       </div>
     </div>
 
@@ -85,9 +105,10 @@
         <h2 class="title-font fail-title text-3xl md:text-4xl font-black mb-3">MISSION FAILED</h2>
         <p class="final-stat mb-1">Final score: <span id="final-score" class="highlight">0</span></p>
         <p class="text-slate-500 text-sm mb-8">Wave reached: <span id="final-wave" class="text-cyan-300 font-semibold">1</span></p>
-        <button id="btn-retry" class="btn-retry title-font px-10 py-3.5 rounded-xl pointer-events-auto">
-          RETRY
-        </button>
+        <div class="flex flex-col gap-2 pointer-events-auto">
+          <button id="btn-retry" class="btn-retry title-font px-10 py-3.5 rounded-xl">RETRY</button>
+          <button id="btn-fail-menu" class="btn-secondary title-font px-10 py-3 rounded-xl text-sm">MENU</button>
+        </div>
       </div>
     </div>
   </div>
@@ -116,6 +137,9 @@
   <script src="js/stars.js"></script>
   <script src="js/powerups.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/stage-director.js"></script>
+  <script src="js/stages/stage-01.js"></script>
   <script src="js/enemies.js"></script>
   <script src="js/boss.js"></script>
   <script src="js/game.js"></script>

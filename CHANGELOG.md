@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-06-07
+
+- Stage 1 campaign: `StageDirector` + `data/stages/stage-01.json`, scripted formations → boss
+- Title menu: Stage 1 vs Arcade Endless; star banking to localStorage on stage clear
+- Boss tune: ~4200 HP stage boss / ~2450 wave-5 boss, denser patterns, phase-2 rage telegraph
+- Arcade: wave progress blocked while boss is alive
+
 ## 0.3.4 — 2026-06-07
 
 - Gameplay: wave boss every 5 waves (Debris Core, 2 phases), wave/boss banners

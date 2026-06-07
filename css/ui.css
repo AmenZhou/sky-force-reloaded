@@ -462,6 +462,38 @@ kbd.key {
   box-shadow: 0 1px 0 #9f1239, 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
+.btn-secondary {
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.1s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-secondary:hover {
+  color: #e2e8f0;
+  border-color: rgba(34, 211, 238, 0.45);
+}
+
+.btn-secondary:active {
+  transform: translateY(2px);
+}
+
+.overlay-panel.success {
+  border-color: rgba(74, 222, 128, 0.35);
+  box-shadow: 0 0 40px rgba(74, 222, 128, 0.15);
+}
+
+.mode-select .btn-launch {
+  width: 100%;
+}
+
+.mode-select .btn-secondary {
+  width: 100%;
+}
+
 .fail-title {
   background: linear-gradient(90deg, #fb7185, #fb923c);
   -webkit-background-clip: text;
@@ -598,6 +630,12 @@ kbd.key {
 .wave-banner.clear {
   color: #4ade80;
   text-shadow: 0 0 24px rgba(74, 222, 128, 0.85);
+}
+
+.wave-banner.stage {
+  color: #c4b5fd;
+  text-shadow: 0 0 24px rgba(167, 139, 250, 0.85);
+  letter-spacing: 0.25em;
 }
 
 @keyframes wave-banner-pop {

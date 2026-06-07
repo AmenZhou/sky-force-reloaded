@@ -1,8 +1,11 @@
 class Game {
-  constructor(canvas, callbacks = {}) {
+  constructor(canvas, callbacks = {}, options = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.callbacks = callbacks;
+    this.mode = options.mode || 'arcade';
+    this.stageData = options.stageData || null;
+    this.stageDirector = null;
     this.running = false;
     this.rafId = 0;
     this.lastTime = 0;
@@ -114,6 +117,26 @@ class Game {
   start() {
     this.running = true;
     this.lastTime = performance.now();
+
+    if (this.mode === 'stage' && this.stageData) {
+      this.enemies.setSpawnPaused(true);
+      this.stageDirector = new StageDirector(this.canvas.width, this.canvas.height, {
+        onBanner: (text, kind) => this.callbacks.onBanner?.(text, kind),
+        onSetSection: (section) => {
+          this.wave = section;
+          this.callbacks.onWaveStart?.(section);
+        },
+        onSpawnEnemy: (type, x, y, wave, opts) => {
+          this.enemies.spawn(type, x, y, wave, opts);
+        },
+        onSpawnBoss: (ev) => this._spawnStageBoss(ev),
+      });
+      this.stageDirector.getWave = () => this.wave;
+      this.stageDirector.loadFromObject(this.stageData);
+      this.stageDirector.start();
+      this.callbacks.onStageStart?.(this.stageData);
+    }
+
     this.rafId = requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -157,14 +180,21 @@ class Game {
     this.player.tick(rawDt);
 
     this.bullets.update(dt, this.canvas.width, this.canvas.height);
-    this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
+
+    if (this.mode === 'stage' && this.stageDirector?.running) {
+      this.stageDirector.update(dt);
+    } else {
+      this.enemies.update(dt, this.wave, this.scrollSpeed * 0.35);
+    }
+
     this.enemies.tryFire(this.bullets, this.player, dt, this.wave);
     this.powerups.update(dt, this.scrollSpeed * 0.5);
     this.stars.update(dt, this.scrollSpeed * 0.5);
 
     this._resolveCollisions();
 
-    if (this.enemyKillsThisWave >= this.killsForNextWave) {
+    if (this.mode === 'arcade' && !this.bossActive
+      && this.enemyKillsThisWave >= this.killsForNextWave) {
       const prevWave = this.wave;
       this.wave += 1;
       this.enemyKillsThisWave = 0;
@@ -193,6 +223,8 @@ class Game {
       wave: this.wave,
       lives: this.lives,
       maxLives: this.maxLives,
+      mode: this.mode,
+      stageName: this.stageData?.name || null,
       shieldPct: this.player.shieldPct * 100,
       weaponLevel: this.player.weaponLevel,
       combo: this.combo,
@@ -225,7 +257,9 @@ class Game {
   }
 
   _spawnWaveBoss() {
-    this.boss = new WaveBoss(this.canvas.width / 2, 90, this.wave, this.canvas.width);
+    this.boss = new WaveBoss(this.canvas.width / 2, 90, this.wave, this.canvas.width, {
+      stageBoss: false,
+    });
     this.bossActive = true;
     this.bossHpPct = 100;
     this.enemies.setSpawnPaused(true);
@@ -233,15 +267,30 @@ class Game {
     this.callbacks.onBossSpawn?.({ name: this.boss.name, wave: this.wave });
   }
 
+  _spawnStageBoss(ev) {
+    this.boss = new WaveBoss(this.canvas.width / 2, 90, Math.max(3, this.wave), this.canvas.width, {
+      maxHp: ev.hp || 4200,
+      name: ev.name || 'DEBRIS CORE',
+      stageBoss: true,
+      fireScale: 1.1,
+    });
+    this.bossActive = true;
+    this.bossHpPct = 100;
+    this.enemies.setSpawnPaused(true);
+    this.screenShake = 0.45;
+    this.callbacks.onBossSpawn?.({ name: this.boss.name, wave: this.wave, stage: true });
+  }
+
   _onBossDefeated() {
     const x = this.boss.x;
     const y = this.boss.y;
+    const wasStageBoss = this.boss.stageBoss;
     this.boss = null;
     this.bossActive = false;
     this.bossHpPct = 100;
     this.enemies.setSpawnPaused(false);
-    this._addScore(3500);
-    this.runStars += 25;
+    this._addScore(wasStageBoss ? 5000 : 3500);
+    this.runStars += wasStageBoss ? 40 : 25;
     for (let i = 0; i < 12; i += 1) {
       const angle = (i / 12) * Math.PI * 2;
       this.stars.spawn(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20, 18);
@@ -249,7 +298,23 @@ class Game {
     this.powerups.spawn(x, y, 'weapon');
     this.powerups.spawn(x - 30, y + 10, 'shield');
     this.waveBannerTimer = 2.5;
-    this.callbacks.onBossDefeated?.({ wave: this.wave });
+    this.callbacks.onBossDefeated?.({ wave: this.wave, stageBoss: wasStageBoss });
+
+    if (wasStageBoss && this.mode === 'stage') {
+      this.stageDirector?.stop();
+      const bonus = this.stageData?.clearBonusStars || 50;
+      this.runStars += bonus;
+      const medals = this.stageDirector?._medalSnapshot?.() || { completion: true };
+      this.running = false;
+      this.callbacks.onStageComplete?.({
+        score: this.score,
+        runStars: this.runStars,
+        stageId: this.stageData?.id,
+        stageName: this.stageData?.name,
+        medals,
+        clearBonusStars: bonus,
+      });
+    }
   }
 
   _resolveCollisions() {
@@ -281,7 +346,8 @@ class Game {
           this.bullets.playerPool.release(bullet);
           if (enemy.takeDamage(bullet.damage)) {
             this._addScore(enemy.points);
-            this.enemyKillsThisWave += 1;
+            if (this.mode === 'arcade') this.enemyKillsThisWave += 1;
+            this.stageDirector?.onEnemyKilled();
             this.stars.spawn(enemy.x, enemy.y, 10 + Math.floor(enemy.points / 50));
             if (Math.random() < enemy.dropChance) {
               this.powerups.spawn(enemy.x, enemy.y, enemy.dropType);
@@ -351,7 +417,14 @@ class Game {
     this.player.reset(this.canvas.width / 2, this.canvas.height - 80);
     if (this.lives <= 0) {
       this.running = false;
-      this.callbacks.onGameOver?.({ score: this.score, wave: this.wave, runStars: this.runStars });
+      this.stageDirector?.stop();
+      this.callbacks.onGameOver?.({
+        score: this.score,
+        wave: this.wave,
+        runStars: this.runStars,
+        mode: this.mode,
+        stageName: this.stageData?.name,
+      });
     }
   }
 

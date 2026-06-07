@@ -3,18 +3,19 @@
  * Coordinates are normalized 0–1 unless noted; multiplied by stage width/height at runtime.
  */
 class StageDirector {
-  constructor(w, h, enemyManager, callbacks = {}) {
+  constructor(w, h, callbacks = {}) {
     this.w = w;
     this.h = h;
-    this.enemies = enemyManager;
     this.callbacks = callbacks;
     this.stage = null;
     this.elapsed = 0;
     this.eventIndex = 0;
     this.difficulty = 'normal';
     this.running = false;
+    this.bossSpawned = false;
     this.killStats = { spawned: 0, killed: 0 };
     this.survivorsRescued = new Set();
+    this.getWave = () => 1;
   }
 
   async load(url) {
@@ -35,6 +36,7 @@ class StageDirector {
     this.elapsed = 0;
     this.eventIndex = 0;
     this.running = true;
+    this.bossSpawned = false;
     this.killStats = { spawned: 0, killed: 0 };
     this.survivorsRescued = new Set();
   }
@@ -47,7 +49,7 @@ class StageDirector {
     return this.stage?.difficultyMultipliers?.[this.difficulty] || { enemyHp: 1, bulletSpeed: 1, starReward: 1 };
   }
 
-  update(dt, scrollSpeed) {
+  update(dt) {
     if (!this.running || !this.stage) return;
     this.elapsed += dt;
 
@@ -62,25 +64,27 @@ class StageDirector {
   _dispatch(ev) {
     switch (ev.action) {
       case 'banner':
-        this.callbacks.onBanner?.(ev.text);
+        this.callbacks.onBanner?.(ev.text, ev.kind || 'wave');
+        break;
+      case 'setSection':
+        this.callbacks.onSetSection?.(ev.section);
         break;
       case 'spawn':
         this._spawnAt(ev.enemy, ev.x * this.w, ev.y * this.h, ev);
         break;
       case 'spawnGroup':
         for (const spec of ev.enemies) {
-          if (spec.x != null) {
-            this._spawnAt(spec.type, spec.x * this.w, spec.y * this.h, spec);
-          } else {
-            this.callbacks.onSpawnPath?.(spec);
-          }
+          this._spawnAt(spec.type, spec.x * this.w, spec.y * this.h, spec);
         }
         break;
       case 'spawnSurvivor':
         this.callbacks.onSpawnSurvivor?.(ev);
         break;
       case 'spawnBoss':
-        this.callbacks.onSpawnBoss?.(ev);
+        if (!this.bossSpawned) {
+          this.bossSpawned = true;
+          this.callbacks.onSpawnBoss?.(ev);
+        }
         break;
       case 'stageComplete':
         this.running = false;
@@ -93,10 +97,11 @@ class StageDirector {
 
   _spawnAt(type, x, y, ev) {
     this.killStats.spawned += 1;
-    this.callbacks.onSpawnEnemy?.(type, x, y, {
+    const wave = this.getWave();
+    this.callbacks.onSpawnEnemy?.(type, x, y, wave, {
+      elite: ev.elite,
+      vx: ev.vx,
       hpMult: this.multiplier.enemyHp,
-      pattern: ev.pattern,
-      patternIntervalSec: ev.patternIntervalSec,
     });
   }
 

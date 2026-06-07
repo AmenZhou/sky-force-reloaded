@@ -95,7 +95,7 @@ async function main() {
   });
 
   await page.goto(GAME_URL);
-  await page.click('#btn-start');
+  await page.click('#btn-arcade');
   await page.waitForTimeout(400);
 
   logger.write({
