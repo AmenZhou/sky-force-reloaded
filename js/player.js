@@ -7,6 +7,9 @@ class Player {
     this.radius = 14;
     this.hitboxRadius = 4;
     this.speed = 220;
+    this.moveSpeedMult = 1;
+    this.damageMult = 1;
+    this.missileSwarm = false;
     this.maxShield = 100;
     this.shield = 100;
     this.weaponLevel = 1;
@@ -26,7 +29,10 @@ class Player {
   applyHangar(stats) {
     this.hangarStats = stats;
     this.maxShield = stats.shieldMax;
-    this.shield = stats.shieldMax;
+    this.shield = stats.startShieldFull ? stats.shieldMax : stats.shieldMax;
+    this.moveSpeedMult = stats.moveSpeedMult || 1;
+    this.damageMult = stats.damageMult || 1;
+    this.missileSwarm = !!stats.missileSwarm;
   }
 
   reset(x, y) {
@@ -43,8 +49,9 @@ class Player {
   }
 
   moveByAxes(ax, ay, dt, w, h) {
-    this.x = Math.max(this.hitboxRadius, Math.min(w - this.hitboxRadius, this.x + ax * this.speed * dt));
-    this.y = Math.max(h * 0.45, Math.min(h - this.hitboxRadius, this.y + ay * this.speed * dt));
+    const spd = this.speed * (this.moveSpeedMult || 1);
+    this.x = Math.max(this.hitboxRadius, Math.min(w - this.hitboxRadius, this.x + ax * spd * dt));
+    this.y = Math.max(h * 0.45, Math.min(h - this.hitboxRadius, this.y + ay * spd * dt));
   }
 
   moveByDelta(dx, dy, w, h) {
@@ -74,13 +81,19 @@ class Player {
     this.fireTimer = cd;
 
     const spread = this._cannonPattern();
-    const dmg = 8 + this.weaponLevel + (hs?.cannonDamageBonus || 0);
+    const dmg = Math.round((8 + this.weaponLevel + (hs?.cannonDamageBonus || 0)) * (this.damageMult || 1));
     for (const offset of spread) {
       bulletPool.spawnPlayerBullet(this.x + offset, this.y - 18, 520, dmg);
     }
 
     const wing = hs?.wingLevel || 0;
-    if (wing >= 1) {
+    if (this.missileSwarm && hs?.missileSalvo > 0) {
+      this.missileTimer -= dt;
+      if (this.missileTimer <= 0) {
+        this.missileTimer = (hs.missileInterval || 2.5) * 0.85;
+        bulletPool.fireHomingMissiles(this, enemies, hs.missileSalvo + 2, dmg);
+      }
+    } else if (wing >= 1) {
       bulletPool.spawnPlayerBullet(this.x - 22, this.y - 8, 480, dmg - 2);
       bulletPool.spawnPlayerBullet(this.x + 22, this.y - 8, 480, dmg - 2);
     }
@@ -89,7 +102,7 @@ class Player {
       bulletPool.spawnPlayerBullet(this.x + 32, this.y - 4, 440, dmg - 3);
     }
 
-    if (hs?.missileSalvo > 0) {
+    if (!this.missileSwarm && hs?.missileSalvo > 0) {
       this.missileTimer -= dt;
       if (this.missileTimer <= 0) {
         this.missileTimer = hs.missileInterval || 2.5;
@@ -110,7 +123,9 @@ class Player {
 
   takeDamage(amount) {
     if (this.invuln > 0 || this.energyShieldActive > 0) return false;
-    this.shield -= amount;
+    const hs = this.hangarStats;
+    const scaled = Math.round(amount * (hs?.ramDamageMult || 1));
+    this.shield -= scaled;
     this.hitFlash = 0.45;
     this.invuln = 1.5;
     if (this.shield <= 0) {

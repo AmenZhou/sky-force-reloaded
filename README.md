@@ -20,15 +20,22 @@ Open **http://localhost:8766/sky_force_reloaded.html**
 
 | Input | Action |
 |-------|--------|
-| `← →` / `A D` | Move ship |
-| `Space` (hold) | Fire |
-| Touch / drag | Move + auto-fire |
+| Touch / drag | Move ship (relative delta) |
+| Auto | Fire while playing |
+| `← → ↑ ↓` / WASD | Move (desktop) |
+| `Z` / `X` / `C` | Laser / energy shield / mega bomb |
+| Lift finger | Focus Time (20% slow-mo) |
 
-## Features (v0.2)
+## Features (v0.6)
 
-- Relative touch movement, always-on auto-fire, time dilation on idle
-- Star pickups, combo multiplier, 4px hitbox
-- See **`CHANGELOG.md`** for full history
+- **Hub:** Hangar (Upgrades · Fleet · Album) · Stages · Arcade
+- **Collection:** 12 permanent cards + ship parts — unconfirmed until stage clear
+- **Fleet:** 5 ships with distinct stats (part-gated unlocks)
+- **Destructibles:** Crates, radar towers, fuel tanks
+- **Medals:** Live HUD chips + slide banners + Perfect crack on first hit
+- **Campaign:** Stage 1 with hostages, boss, destructible placements
+
+See **`docs/FEATURES-AND-DESIGN.md`** for the full design reference and **`CHANGELOG.md`** for history.
 
 ## Project layout
 
@@ -39,6 +46,7 @@ sky-force-reloaded/
 │   ├── economy/hangar.json   # Shop costs & growth curves
 │   └── stages/stage-01.json
 ├── docs/
+│   ├── FEATURES-AND-DESIGN.md # ★ Master reference — all features & design (v0.5)
 │   ├── GDD.md                # Game design document
 │   ├── DRD.md                # Design requirements (5 pillars)
 │   ├── ECONOMY-SPEC.md       # Hangar pricing math & star income
@@ -56,6 +64,7 @@ sky-force-reloaded/
 
 | Doc | Contents |
 |-----|----------|
+| **FEATURES-AND-DESIGN** | **Start here** — implemented features, modes, hangar, medals, controls |
 | **GDD** | Core loop, enemies, stages, economy overview |
 | **DRD** | Five design pillars + acceptance criteria |
 | **ECONOMY-SPEC** | Star income formulas, upgrade cost curves, pacing tables |
@@ -65,7 +74,6 @@ sky-force-reloaded/
 
 ## Roadmap (summary)
 
-1. **v0.4** — Stage framework + star banking  
-2. **v0.6** — Hangar (HP, cannon, magnet) with exponential costs  
-3. **v0.8** — Medals + survivors  
-4. **v0.9–v1.2** — Technicians, gimmick stages, modular bosses, escort crates
+**Done through v0.5:** stages, hangar, medals, hostages, abilities, agent.
+
+**Next:** Stage 2–3 · pause/settings · audio · chain-break combo · technicians · gimmick stages (see ROADMAP.md).

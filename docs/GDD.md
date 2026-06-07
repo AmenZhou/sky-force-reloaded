@@ -41,23 +41,25 @@ flowchart LR
 | **Boss** | Pattern recognition, burst DPS | Stage clear, bonus stars |
 | **Results** | Review medals, retry for perfection | Unlock next stage / difficulty |
 
-**MVP loop (v0.2–v0.5):** Stage select → single ship → boss every N waves → game over → local high score. Hangar deferred to v0.6+.
+**MVP loop (v0.5):** Title hub → Hangar / Stage select / Arcade → combat → boss → results → bank stars → upgrade hangar. Medals unlock Hard → Insane → Nightmare.
+
+> **Implementation reference:** see **`docs/FEATURES-AND-DESIGN.md`** for current v0.5 behavior.
 
 ---
 
 ## 3. Reference Mechanics (Sky Force Reloaded)
 
-| System | Original | Our MVP | Stretch |
-|--------|----------|---------|---------|
-| Stages | 16 fixed stages + bonus | 3 handcrafted stages | 8+ stages, bonus stage |
-| Planes | 9 unlockable | 1 starter ship | 3 ships with different stats |
-| Auto-fire | Always on | Always on | Supercharge charge shot |
-| Manual power-ups | Laser, shield, mega bomb | Shield button (stretch) | Full trio + cooldown UI |
-| In-run upgrades | Weapon upgrade pickups | `W` pickup → weapon level 1–4 | Separate fire-rate vs spread tracks |
-| Currency | Stars (persistent) | Score only (v0.1) → stars v0.4 | Shared hangar upgrades |
-| Hangar | 10-tier upgrades per module | — | HP, cannon, wings, magnet, missiles |
-| Medals | 4 objectives per stage | — | No-hit, rescue all, time, score |
-| Difficulty | Normal → Premium → Nightmare | Single curve | Difficulty multiplier on enemy HP/fire |
+| System | Original | Our game (v0.5) | Stretch |
+|--------|----------|-----------------|---------|
+| Stages | 16 fixed stages + bonus | Stage 1 campaign + Arcade | 8+ stages |
+| Planes | 9 unlockable | 1 starter ship | 3 ships |
+| Auto-fire | Always on | ✓ Always on | Supercharge charge shot |
+| Manual power-ups | Laser, shield, mega bomb | ✓ Z/X/C + hangar stocks | Cooldown UI polish |
+| In-run upgrades | Weapon upgrade pickups | ✓ W pickup → level 1–4 + hangar pattern | Separate fire-rate track |
+| Currency | Stars (persistent) | ✓ Banked on stage clear | Pre-stage consumables |
+| Hangar | 10-tier upgrades per module | ✓ 8 modules, heavy-grind curve | Cards |
+| Medals | 4 objectives per stage | ✓ 4 medals × 4 difficulties | Time/score medals |
+| Difficulty | Normal → Premium → Nightmare | ✓ Normal → Hard → Insane → Nightmare | — |
 | Technicians / Cards | Meta modifiers | — | v0.9–v1.0 ([[MECHANICS-DEPTH]]) |
 | Escort crate / wreckage | Rogue-lite mid-level events | — | v1.0+ |
 | Gimmick stages (EMP, darkness) | Pacing breaks | — | v1.0–v1.1 |
@@ -225,25 +227,27 @@ Full screen map, tokens, and wireframes: **`docs/UI-SPEC.md`**
 
 ---
 
-## 10. v0.1 Scaffold Gap Analysis
+## 10. v0.5 Implementation Status
 
-| Feature | v0.1 status | Gap |
-|---------|-------------|-----|
-| Canvas game loop | ✓ | — |
-| Player move + fire | ✓ | Auto-fire always (Sky Force style) not yet default on keyboard |
-| Shield + lives | ✓ | Lives tied to shield depletion only — OK |
-| Enemy types ×3 | ✓ | Missing turrets, bosses, scripted waves |
-| Power-ups W/S | ✓ | Missing stars as entities, health pickup |
-| Wave progression | ✓ (endless) | Not stage-based |
-| Enemy firing | ✓ | Needs pattern variety |
-| Parallax BG | ✓ | Stage-themed layers missing |
-| Stars currency | ✗ | Score only |
-| Hangar | ✗ | Planned v0.6 |
-| Boss fights | ✗ | Planned v0.5 |
-| Medals | ✗ | Planned v0.8 |
-| Save / progress | ✗ | localStorage v0.4 |
-| AI test agent | ✗ | Planned v0.7 |
-| Audio | ✗ | Planned v0.6+ |
+| Feature | Status |
+|---------|--------|
+| Canvas game loop | ✓ |
+| Relative touch + 4px hitbox + Focus Time | ✓ |
+| Always-on auto-fire | ✓ |
+| Star entities + combo | ✓ |
+| Stage 1 JSON campaign + StageDirector | ✓ |
+| Arcade endless + wave-5 bosses | ✓ |
+| Hangar 8 modules + star banking | ✓ |
+| Medals + 4 difficulty tiers | ✓ |
+| Hostages + rescue meter | ✓ |
+| Active abilities (laser/shield/bomb) | ✓ |
+| Playwright agent + getState | ✓ |
+| Stage 2+ | ✗ |
+| Pause / settings / audio | ✗ |
+| Chain-break combo on escape | ✗ |
+| Technicians, crates, gimmick stages | ✗ |
+
+Full detail: **`docs/FEATURES-AND-DESIGN.md`**
 
 ---
 
@@ -281,4 +285,4 @@ Full screen map, tokens, and wireframes: **`docs/UI-SPEC.md`**
 
 ---
 
-*Last updated: 2026-06-06*
+*Last updated: 2026-06-07*

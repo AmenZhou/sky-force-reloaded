@@ -89,6 +89,9 @@ class StageDirector {
       case 'spawnHostage':
         this.callbacks.onSpawnHostage?.(ev.id, ev.x * this.w, ev.y * this.h);
         break;
+      case 'spawnDestructible':
+        this.callbacks.onSpawnDestructible?.(ev.destructible || ev.type, ev.x * this.w, ev.y * this.h);
+        break;
       case 'stageComplete':
         this.running = false;
         this.callbacks.onStageComplete?.(this._medalSnapshot());

@@ -9,6 +9,9 @@ class Game {
     this.hangarStats = options.hangarStats || HangarSystem.statsFromSave(SkyForceSave.load());
     this.stageDirector = null;
     this.hostages = new HostageManager();
+    this.destructibles = new DestructibleManager();
+    this.runLoot = new RunLootManager();
+    this.medalTracker = null;
     this.runHits = 0;
     this.runCharges = {};
     this.friendCheckpoint = options.friendCheckpoint ?? SkyForceSave.load().friendCheckpointScore ?? 42000;
@@ -26,6 +29,7 @@ class Game {
     this.combo = 1;
     this.comboTimer = 0;
     this.comboDecaySec = 3;
+    this.arcadeCrateTimer = 8;
     this.timeScale = 1;
     this.idleTimer = 0;
     this.dilationDelay = 0.1;
@@ -148,11 +152,18 @@ class Game {
           this.enemies.spawn(type, x, y, wave, { ...opts, difficultyHpMult: hpMult });
         },
         onSpawnHostage: (id, x, y) => this.hostages.spawn(id, x, y),
+        onSpawnDestructible: (type, x, y) => this.destructibles.spawn(type, x, y),
         onSpawnBoss: (ev) => this._spawnStageBoss(ev),
       });
       this.stageDirector.getWave = () => this.wave;
       this.stageDirector.loadFromObject(this.stageData);
       this.stageDirector.start();
+      this.medalTracker = new MedalRunTracker(HANGAR_CONFIG.medals, {
+        onMedalEarned: (id, text) => this.callbacks.onMedalEarned?.(id, text),
+        onMedalFailed: (id) => this.callbacks.onMedalFailed?.(id),
+      });
+      this.medalTracker.reset(2);
+      this.callbacks.onMedalHudUpdate?.(this.medalTracker.hudState());
       this.callbacks.onStageStart?.(this.stageData);
     }
 
@@ -181,7 +192,7 @@ class Game {
     const dt = rawDt * this.timeScale;
 
     if (this.comboTimer > 0) {
-      this.comboTimer -= rawDt;
+      this.comboTimer -= rawDt / (this.hangarStats.comboDecayMult || 1);
       if (this.comboTimer <= 0) this.combo = 1;
     }
 
@@ -210,6 +221,14 @@ class Game {
     const bulletMult = window.HANGAR_CONFIG?.difficulty?.bulletSpeed?.[this.difficulty] || 1;
     this.enemies.tryFire(this.bullets, this.player, dt, this.wave, bulletMult);
     this.powerups.update(dt, this.scrollSpeed * 0.5);
+    this.destructibles.update(dt, this.scrollSpeed * 0.35);
+    this.runLoot.update(
+      dt,
+      this.scrollSpeed * 0.5,
+      this.player,
+      this.hangarStats.magnetRadius,
+      this.hangarStats.magnetStrength,
+    );
     this.stars.update(
       dt,
       this.scrollSpeed * 0.5,
@@ -218,10 +237,35 @@ class Game {
       this.hangarStats.magnetStrength,
     );
     this.hostages.update(dt, this.player, (h) => {
-      this.runStars += 5;
-      this._addScore(200);
+      const bonus = 5 * (this.hangarStats.starPickupMult || 1);
+      this.runStars += Math.round(bonus);
+      this._addScore(200 + (this.hangarStats.rescueScoreBonus || 0));
       this.callbacks.onHostageRescued?.(h.id);
+      if (this.medalTracker) {
+        this.medalTracker.onHostageRescued(
+          this.hostages.totalSpawned,
+          this.hostages.rescuedCount,
+        );
+        this.callbacks.onMedalHudUpdate?.(this.medalTracker.hudState());
+      }
     });
+
+    if (this.mode === 'arcade' && !this.bossActive) {
+      this.arcadeCrateTimer -= rawDt;
+      if (this.arcadeCrateTimer <= 0) {
+        this.arcadeCrateTimer = 10 + Math.random() * 8;
+        this.destructibles.spawn('crate', 40 + Math.random() * (this.canvas.width - 80), -20);
+        if (this.wave >= 3 && Math.random() < 0.35) {
+          this.destructibles.spawn('radar', 60 + Math.random() * (this.canvas.width - 120), -40);
+        }
+      }
+    }
+
+    if (this.mode === 'stage' && this.stageDirector && this.medalTracker) {
+      const ks = this.stageDirector.killStats;
+      this.medalTracker.onKillStats(ks.spawned, ks.killed);
+      this.callbacks.onMedalHudUpdate?.(this.medalTracker.hudState());
+    }
 
     if (this.mode === 'stage' && !this.checkpointPassed && this.score >= this.friendCheckpoint) {
       this.checkpointPassed = true;
@@ -273,11 +317,15 @@ class Game {
       runCharges: { ...this.runCharges },
       difficulty: this.difficulty,
       hitFlash: this.hitFlash,
+      medalHud: this.medalTracker?.hudState() || null,
+      runUnconfirmed: SkyForceSave.load().runUnconfirmed,
     });
   }
 
   _notifyHit(damage, lostLife) {
     this.runHits += 1;
+    this.medalTracker?.onPlayerDamaged();
+    this.callbacks.onMedalHudUpdate?.(this.medalTracker?.hudState() || null);
     this.hitFlash = Math.max(this.hitFlash, 0.35);
     this.screenShake = 0.2;
     this.callbacks.onPlayerHit?.({
@@ -344,7 +392,16 @@ class Game {
       this.stageDirector?.stop();
       const bonus = this.stageData?.clearBonusStars || 50;
       this.runStars += bonus;
-      const medals = this._computeMedals();
+      const medals = this.medalTracker
+        ? this.medalTracker.snapshotForClear(
+          this.stageDirector.killStats.spawned,
+          this.stageDirector.killStats.killed,
+          { total: this.hostages.totalSpawned, rescued: this.hostages.rescuedCount },
+        )
+        : this._computeMedals();
+      const save = SkyForceSave.load();
+      const confirmed = CollectionSystem.confirmRunLoot(save);
+      SkyForceSave.write(save);
       this.running = false;
       this.callbacks.onStageComplete?.({
         score: this.score,
@@ -358,6 +415,8 @@ class Game {
         killPct: this.stageDirector?.killStats
           ? this.stageDirector.killStats.killed / Math.max(1, this.stageDirector.killStats.spawned)
           : 0,
+        newCards: confirmed.newCards,
+        newParts: confirmed.newParts,
       });
     }
   }
@@ -372,6 +431,66 @@ class Game {
     if (this.hostages.totalSpawned > 0 && this.hostages.allRescued) medals.push('rescueAll');
     if (this.runHits === 0) medals.push('noHit');
     return medals;
+  }
+
+  _luckMult() {
+    return (this.hangarStats.luckMult || 1) * (this.hangarStats.lootLuckMult || 1);
+  }
+
+  _tryLootDrop(x, y, source) {
+    const luck = this._luckMult();
+    const card = CollectionSystem.rollCardDrop(source, luck);
+    if (card) {
+      this.runLoot.spawn(x, y, 'card', card.id);
+      return;
+    }
+    const part = CollectionSystem.rollPartDrop(luck, source === 'radar' ? 'radar' : 'elite');
+    if (part) this.runLoot.spawn(x, y, 'part', part);
+  }
+
+  _collectRunLoot(item) {
+    const save = SkyForceSave.load();
+    let label = '';
+    if (item.kind === 'card') {
+      if (CollectionSystem.addUnconfirmedCard(save, item.payload)) {
+        const def = CollectionSystem.getCardDef(item.payload);
+        label = def?.name || 'Card';
+        this.callbacks.onLootPickup?.('card', label);
+      }
+    } else if (item.kind === 'part') {
+      if (CollectionSystem.addUnconfirmedPart(save, item.payload)) {
+        const def = COLLECTION_CONFIG.partLabels[item.payload];
+        label = def || 'Ship Part';
+        this.callbacks.onLootPickup?.('part', label);
+      }
+    }
+    SkyForceSave.write(save);
+    item.active = false;
+  }
+
+  _onDestructibleDestroyed(d) {
+    const x = d.x;
+    const y = d.y;
+    this.screenShake = Math.max(this.screenShake, 0.25);
+    this._addScore(d.type === 'radar' || d.type === 'fuel' ? 400 : 120);
+
+    if (d.dropProfile === 'crate') {
+      const rates = COLLECTION_CONFIG.dropRates;
+      if (Math.random() < rates.cratePowerup) {
+        this.powerups.spawn(x, y, Math.random() < 0.5 ? 'weapon' : 'shield');
+        if (Math.random() < 0.4) this.powerups.spawn(x + 20, y + 8, 'shield');
+      }
+      for (let i = 0; i < 3; i += 1) {
+        this.stars.spawn(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 20, 12);
+      }
+      this._tryLootDrop(x, y, 'crate');
+    } else {
+      for (let i = 0; i < 14; i += 1) {
+        const angle = (i / 14) * Math.PI * 2;
+        this.stars.spawn(x + Math.cos(angle) * 24, y + Math.sin(angle) * 24, 22);
+      }
+      this._tryLootDrop(x, y, 'radar');
+    }
   }
 
   useAbility(kind) {
@@ -436,6 +555,20 @@ class Game {
   }
 
   _resolveCollisions() {
+    for (const bullet of [...this.bullets.playerBullets]) {
+      if (!bullet.active) continue;
+      for (const d of this.destructibles.list) {
+        if (!d.active) continue;
+        if (this._hit(bullet, d)) {
+          this.bullets.playerPool.release(bullet);
+          if (this.destructibles.takeDamage(d, bullet.damage)) {
+            this._onDestructibleDestroyed(d);
+          }
+          break;
+        }
+      }
+    }
+
     if (this.boss?.alive) {
       for (const bullet of [...this.bullets.playerBullets]) {
         if (!bullet.active) continue;
@@ -469,6 +602,7 @@ class Game {
             this.stageDirector?.onEnemyKilled();
             this.stars.spawn(enemy.x, enemy.y, 10 + Math.floor(enemy.points / 50));
             this.screenShake = 0.12;
+            if (enemy.elite) this._tryLootDrop(enemy.x, enemy.y, 'elite');
             if (Math.random() < enemy.dropChance) {
               this.powerups.spawn(enemy.x, enemy.y, enemy.dropType);
             }
@@ -525,8 +659,16 @@ class Game {
       if (!star.active) continue;
       if (this._hit(star, this.player, 1.4, true)) {
         star.active = false;
-        this.runStars += Math.max(1, Math.round(star.value / 10));
+        const starMult = this.hangarStats.starPickupMult || 1;
+        this.runStars += Math.max(1, Math.round((star.value / 10) * starMult));
         this._addScore(star.value);
+      }
+    }
+
+    for (const item of this.runLoot.list) {
+      if (!item.active) continue;
+      if (this._hit(item, this.player, 1.3, true)) {
+        this._collectRunLoot(item);
       }
     }
 
@@ -552,12 +694,17 @@ class Game {
     if (this.lives <= 0) {
       this.running = false;
       this.stageDirector?.stop();
+      const save = SkyForceSave.load();
+      const lost = { ...(save.runUnconfirmed || {}) };
+      CollectionSystem.discardRunLoot(save);
+      SkyForceSave.write(save);
       this.callbacks.onGameOver?.({
         score: this.score,
         wave: this.wave,
         runStars: this.runStars,
         mode: this.mode,
         stageName: this.stageData?.name,
+        lostUnconfirmed: lost,
       });
     }
   }
@@ -574,9 +721,11 @@ class Game {
     this.stars.draw(ctx);
     this.powerups.draw(ctx);
     this.enemies.draw(ctx);
+    this.destructibles.draw(ctx);
     this.hostages.draw(ctx);
     if (this.boss?.alive) this.boss.draw(ctx);
     this.bullets.draw(ctx);
+    this.runLoot.draw(ctx);
     this.player.draw(ctx);
     if (this.mode === 'stage') this._drawCheckpointMarker(ctx);
     if (this.hitFlash > 0) {

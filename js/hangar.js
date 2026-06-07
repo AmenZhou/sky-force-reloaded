@@ -28,6 +28,10 @@ const HangarSystem = {
     const level = this.getLevel(save, moduleId);
     if (level >= m.maxLevel) return null;
     let cost = this.round5(m.base * m.growth ** level);
+    if (moduleId === 'cannon') {
+      const discount = CollectionSystem.aggregatePassiveEffects(save).cannonCostMult;
+      cost = this.round5(cost * discount);
+    }
     if (level === 0 && m.unlock > 0 && !this.isModuleUnlocked(save, moduleId)) {
       cost += m.unlock;
     }

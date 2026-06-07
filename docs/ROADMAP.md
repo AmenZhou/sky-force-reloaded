@@ -4,21 +4,25 @@ Phased delivery from current **v0.1 scaffold** to playable **campaign MVP**.
 
 ---
 
-## Current Baseline (v0.1) ✓
+## Current Baseline (v0.5) ✓
 
 | Delivered | Notes |
 |-----------|-------|
-| Canvas shmup loop | 360×640 logical |
-| Player move + fire | Keyboard + touch |
-| Shield / lives / game over | 3 lives |
-| 3 enemy types + random formations | scouts, fighters, tanks |
-| Power-ups W/S | Weapon + shield |
-| Endless waves | Kill quota → next wave |
-| Parallax background | Stars + clouds |
+| Feel polish | Relative touch, auto-fire, combo, 4px hitbox, Focus Time 20% |
+| Stage 1 campaign | JSON timeline, hostages, stage boss |
+| Arcade + wave bosses | Every 5 waves; divers, elites, banners |
+| Hangar meta | 8 modules, exponential costs, ~101k★ full max |
+| Medals + difficulty | 4 medals; Normal → Nightmare unlock chain |
+| Abilities | Laser, energy shield, mega bomb (hangar stocks) |
+| Agent | Playwright + heuristic/LLM + JSONL logs |
+
+**Master feature list:** `docs/FEATURES-AND-DESIGN.md`
 
 **Play:** `python3 -m http.server 8766` → `sky_force_reloaded.html`
 
 ---
+
+## Historical phases (completed)
 
 ## Phase 1 — Feel polish (v0.2)
 

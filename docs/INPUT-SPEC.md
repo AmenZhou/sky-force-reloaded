@@ -63,7 +63,7 @@ Keyboard movement **prevents** time dilation while any movement key is held.
 | Parameter | Value |
 |-----------|-------|
 | Trigger | Touch: no pointer for **≥ 100 ms** after drag (keyboard-only play stays full speed) |
-| Time scale | **0.25** (25% speed) |
+| Time scale | **0.20** (20% speed — Focus Time) |
 | Affects | Entire simulation `dt * timeScale` (player, bullets, enemies, scroll) |
 | UI | `#dilation-overlay` — thin cyan ring on canvas wrapper; hidden at full speed |
 | Exit | Pointer down or movement key → full speed immediately |

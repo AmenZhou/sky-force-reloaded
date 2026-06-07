@@ -13,6 +13,10 @@ const SkyForceSave = {
       stageClears: {},
       stageMedals: {},
       friendCheckpointScore: 42000,
+      equippedShip: 'enforcer',
+      collection: { cards: [], parts: [] },
+      runUnconfirmed: { cards: [], parts: [] },
+      activeTempCards: {},
     };
   },
 

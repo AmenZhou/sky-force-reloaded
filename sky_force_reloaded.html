@@ -50,6 +50,14 @@
   </div>
 
   <div id="wave-banner" class="wave-banner" aria-live="polite">WAVE 1</div>
+  <div id="medal-slide-banner" class="medal-slide-banner" aria-live="polite"></div>
+
+  <div id="medal-run-track" class="medal-run-track hidden pointer-events-none" aria-label="Run medals">
+    <span class="medal-run-chip" data-medal="destroy70" title="70% Annihilation">70%</span>
+    <span class="medal-run-chip" data-medal="destroy100" title="100% Annihilation">100%</span>
+    <span class="medal-run-chip" data-medal="rescueAll" title="Rescue All">Rescue</span>
+    <span class="medal-run-chip" data-medal="noHit" title="Untouched">Perfect</span>
+  </div>
 
   <div id="game-shell" class="relative flex items-center justify-center w-full h-full z-10">
     <div class="canvas-frame relative">
@@ -72,7 +80,21 @@
           <h2 class="title-font text-xl font-black tracking-wider text-cyan-300">HANGAR</h2>
           <span class="text-amber-300 text-sm font-bold"><span id="hangar-stars">0</span> ★</span>
         </div>
-        <div id="hangar-modules" class="hangar-grid"></div>
+        <div class="hangar-tabs pointer-events-auto">
+          <button type="button" id="tab-upgrades" class="hangar-tab active">UPGRADES</button>
+          <button type="button" id="tab-fleet" class="hangar-tab">FLEET</button>
+          <button type="button" id="tab-album" class="hangar-tab">ALBUM</button>
+        </div>
+        <div id="hangar-panel-upgrades">
+          <div id="hangar-modules" class="hangar-grid"></div>
+        </div>
+        <div id="hangar-panel-fleet" class="hidden">
+          <div id="hangar-fleet" class="fleet-grid"></div>
+        </div>
+        <div id="hangar-panel-album" class="hidden">
+          <p class="text-slate-400 text-xs mb-3">Cards claimed on stage clear. Unconfirmed pickups lost on death.</p>
+          <div id="hangar-album" class="album-grid"></div>
+        </div>
         <button id="btn-hangar-back" class="btn-secondary title-font w-full mt-5 py-3 rounded-xl text-sm">BACK</button>
       </div>
     </div>
@@ -120,6 +142,7 @@
         <h2 id="clear-stage-name" class="title-font text-2xl md:text-3xl font-black mb-3 text-emerald-300">Orbital Debris</h2>
         <p class="final-stat mb-1">Score: <span id="clear-score" class="highlight">0</span></p>
         <p class="text-slate-400 text-sm mb-1">Run stars: <span id="clear-run-stars" class="text-amber-300">0</span> ★</p>
+        <p id="clear-new-loot" class="text-violet-300 text-xs mb-2 hidden"></p>
         <p class="text-slate-400 text-sm mb-3">Banked total: <span id="clear-banked-stars" class="text-amber-300">0</span> ★</p>
         <div id="clear-medals" class="medal-row mb-6"></div>
         <div class="flex flex-col gap-2 pointer-events-auto">
@@ -133,7 +156,8 @@
       <div class="overlay-panel danger text-center px-8 py-8 mx-4">
         <h2 class="title-font fail-title text-3xl md:text-4xl font-black mb-3">MISSION FAILED</h2>
         <p class="final-stat mb-1">Final score: <span id="final-score" class="highlight">0</span></p>
-        <p class="text-slate-500 text-sm mb-8">Wave reached: <span id="final-wave" class="text-cyan-300 font-semibold">1</span></p>
+        <p class="text-slate-500 text-sm mb-4">Wave reached: <span id="final-wave" class="text-cyan-300 font-semibold">1</span></p>
+        <p id="fail-lost-loot" class="text-rose-300/90 text-xs mb-6 hidden"></p>
         <div class="flex flex-col gap-2 pointer-events-auto">
           <button id="btn-retry" class="btn-retry title-font px-10 py-3.5 rounded-xl">RETRY</button>
           <button id="btn-fail-menu" class="btn-secondary title-font px-10 py-3 rounded-xl text-sm">MENU</button>
@@ -169,7 +193,10 @@
   <script src="js/save.js"></script>
   <script src="js/economy/hangar-data.js"></script>
   <script src="js/hangar.js"></script>
+  <script src="js/economy/collection-data.js"></script>
+  <script src="js/collection.js"></script>
   <script src="js/hostages.js"></script>
+  <script src="js/destructibles.js"></script>
   <script src="js/stage-director.js"></script>
   <script src="js/stages/stage-01.js"></script>
   <script src="js/enemies.js"></script>

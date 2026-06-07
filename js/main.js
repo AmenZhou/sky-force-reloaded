@@ -10,10 +10,22 @@ const speedBadge = document.getElementById('speed-badge');
 const abilityBar = document.getElementById('ability-bar');
 const bossBar = document.getElementById('boss-bar');
 const waveBanner = document.getElementById('wave-banner');
+const medalSlideBanner = document.getElementById('medal-slide-banner');
+const medalRunTrack = document.getElementById('medal-run-track');
 const bossNameEl = document.getElementById('boss-name');
 const menuBankedStars = document.getElementById('menu-banked-stars');
 const hangarStars = document.getElementById('hangar-stars');
 const hangarModules = document.getElementById('hangar-modules');
+const hangarFleet = document.getElementById('hangar-fleet');
+const hangarAlbum = document.getElementById('hangar-album');
+const tabUpgrades = document.getElementById('tab-upgrades');
+const tabFleet = document.getElementById('tab-fleet');
+const tabAlbum = document.getElementById('tab-album');
+const panelUpgrades = document.getElementById('hangar-panel-upgrades');
+const panelFleet = document.getElementById('hangar-panel-fleet');
+const panelAlbum = document.getElementById('hangar-panel-album');
+const clearNewLoot = document.getElementById('clear-new-loot');
+const failLostLoot = document.getElementById('fail-lost-loot');
 const stageMapList = document.getElementById('stage-map-list');
 const clearMedals = document.getElementById('clear-medals');
 
@@ -76,6 +88,7 @@ function hideAllOverlays() {
   overlayGameOver.classList.add('hidden');
   overlayStageClear.classList.add('hidden');
   abilityBar.classList.add('hidden');
+  if (medalRunTrack) medalRunTrack.classList.add('hidden');
 }
 
 function showMenu() {
@@ -85,6 +98,99 @@ function showMenu() {
   overlayStart.classList.remove('hidden');
   bossBar.classList.add('hidden');
   refreshMenu();
+}
+
+function showHangarTab(tab) {
+  const tabs = { upgrades: tabUpgrades, fleet: tabFleet, album: tabAlbum };
+  const panels = { upgrades: panelUpgrades, fleet: panelFleet, album: panelAlbum };
+  Object.keys(tabs).forEach((k) => {
+    tabs[k]?.classList.toggle('active', k === tab);
+    panels[k]?.classList.toggle('hidden', k !== tab);
+  });
+  if (tab === 'upgrades') renderHangar();
+  if (tab === 'fleet') renderFleet();
+  if (tab === 'album') renderAlbum();
+}
+
+function renderFleet() {
+  if (!hangarFleet) return;
+  const save = SkyForceSave.load();
+  hangarFleet.innerHTML = '';
+  const equipped = CollectionSystem.equippedShip(save);
+  Object.values(COLLECTION_CONFIG.ships).forEach((ship) => {
+    const unlocked = CollectionSystem.isShipUnlocked(save, ship.id);
+    const prog = CollectionSystem.shipPartProgress(save, ship.id);
+    const card = document.createElement('div');
+    card.className = `fleet-card${equipped === ship.id ? ' equipped' : ''}${unlocked ? '' : ' locked'}`;
+    card.innerHTML = `
+      <div class="fleet-head">
+        <span class="fleet-icon">${ship.icon}</span>
+        <div>
+          <div class="fleet-name">${ship.name}</div>
+          <div class="fleet-tag">${ship.tagline}</div>
+        </div>
+      </div>
+      <div class="fleet-parts">${ship.parts?.length
+        ? `Parts ${prog.have}/${prog.need}`
+        : 'Starter ship — always available'}</div>
+    `;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'hangar-upgrade-btn';
+    if (equipped === ship.id) {
+      btn.textContent = 'EQUIPPED';
+      btn.disabled = true;
+    } else if (unlocked) {
+      btn.textContent = 'EQUIP';
+      btn.addEventListener('click', () => {
+        const s = SkyForceSave.load();
+        s.equippedShip = ship.id;
+        SkyForceSave.write(s);
+        renderFleet();
+      });
+    } else {
+      btn.textContent = 'LOCKED — FIND PARTS';
+      btn.disabled = true;
+    }
+    card.appendChild(btn);
+    hangarFleet.appendChild(card);
+  });
+}
+
+function renderAlbum() {
+  if (!hangarAlbum) return;
+  const save = SkyForceSave.load();
+  hangarAlbum.innerHTML = '';
+  const owned = new Set(CollectionSystem.ownedCards(save));
+  const pending = new Set(save.runUnconfirmed?.cards || []);
+  COLLECTION_CONFIG.cards.permanent.forEach((card) => {
+    const cardEl = document.createElement('div');
+    const isOwned = owned.has(card.id);
+    const isPending = pending.has(card.id);
+    cardEl.className = `album-card${isOwned ? ' owned' : ''}${isPending ? ' unconfirmed' : ''}`;
+    cardEl.innerHTML = `
+      <span class="album-num">#${String(card.num).padStart(2, '0')}</span>
+      <div>
+        <div class="album-name">${card.name}${isPending ? ' (unconfirmed)' : ''}</div>
+        <div class="album-desc">${card.desc}</div>
+      </div>
+    `;
+    hangarAlbum.appendChild(cardEl);
+  });
+  const partsOwned = CollectionSystem.ownedParts(save);
+  const partsPending = save.runUnconfirmed?.parts || [];
+  if (partsOwned.length || partsPending.length) {
+    const hdr = document.createElement('p');
+    hdr.className = 'text-slate-400 text-xs mt-3 mb-1';
+    hdr.textContent = 'Ship parts';
+    hangarAlbum.appendChild(hdr);
+    [...new Set([...partsOwned, ...partsPending])].forEach((partId) => {
+      const row = document.createElement('div');
+      row.className = `album-card owned${partsPending.includes(partId) ? ' unconfirmed' : ''}`;
+      row.innerHTML = `<div class="album-name">${COLLECTION_CONFIG.partLabels[partId] || partId}</div>`;
+      hangarAlbum.appendChild(row);
+    });
+  }
 }
 
 function renderHangar() {
@@ -178,7 +284,8 @@ function renderStageMap() {
   const launch = document.createElement('button');
   launch.type = 'button';
   launch.className = 'btn-launch title-font w-full py-3 rounded-xl text-sm mt-4';
-  launch.textContent = `LAUNCH — ${stage.name.toUpperCase()}`;
+  const ship = CollectionSystem.config().ships[CollectionSystem.equippedShip(SkyForceSave.load())];
+  launch.textContent = `LAUNCH — ${stage.name.toUpperCase()} (${ship?.name || 'Enforcer'})`;
   launch.addEventListener('click', () => {
     currentDifficulty = selectedDiff;
     startGame('stage', stage, stage.id, selectedDiff);
@@ -258,6 +365,34 @@ function updateSpeedBadge(timeScale) {
 let hitToastTimer = 0;
 let bannerHideTimer = 0;
 
+let medalSlideTimer = 0;
+
+function showMedalSlide(text, failed = false) {
+  if (!medalSlideBanner) return;
+  medalSlideBanner.textContent = text;
+  medalSlideBanner.className = `medal-slide-banner visible${failed ? ' fail' : ''}`;
+  clearTimeout(medalSlideTimer);
+  medalSlideTimer = setTimeout(() => medalSlideBanner.classList.remove('visible'), 2600);
+}
+
+function updateMedalRunTrack(state) {
+  if (!medalRunTrack || !state) return;
+  medalRunTrack.querySelectorAll('.medal-run-chip').forEach((chip) => {
+    const id = chip.dataset.medal;
+    const s = state[id];
+    chip.classList.remove('pending', 'earned', 'failed', 'noHit');
+    if (!s) {
+      chip.classList.add('pending');
+      return;
+    }
+    if (s.earned) chip.classList.add('earned');
+    else if (s.failed) {
+      chip.classList.add('failed');
+      if (id === 'noHit') chip.classList.add('noHit');
+    } else chip.classList.add('pending');
+  });
+}
+
 function showBanner(text, kind = 'wave') {
   if (!waveBanner) return;
   waveBanner.textContent = text;
@@ -305,6 +440,7 @@ function buildCallbacks() {
     onStageStart(stage) {
       if (hud.waveLabel) hud.waveLabel.textContent = 'Section';
       showBanner(stage.subtitle || stage.name, 'stage');
+      if (medalRunTrack) medalRunTrack.classList.remove('hidden');
     },
     onWaveStart(wave) {
       if (currentMode === 'arcade' && wave % 5 !== 0) showBanner(`WAVE ${wave}`, 'wave');
@@ -320,6 +456,14 @@ function buildCallbacks() {
       showBanner(`PASSED FRIEND ${Math.round(score / 1000)}k!`, 'clear');
     },
     onPlayerHit({ lostLife }) { showHitToast(lostLife); },
+    onMedalEarned(id, text) { showMedalSlide(text, false); },
+    onMedalFailed(id) {
+      if (id === 'noHit') showMedalSlide('✦ Untouched — FAILED', true);
+    },
+    onMedalHudUpdate(state) { updateMedalRunTrack(state); },
+    onLootPickup(kind, label) {
+      showMedalSlide(kind === 'card' ? `CARD: ${label}` : `PART: ${label}`, false);
+    },
     onAbilityUsed() {
       if (game) updateAbilityBar(game.runCharges);
     },
@@ -340,6 +484,7 @@ function buildCallbacks() {
       updateCombo(state);
       updateSpeedBadge(state.timeScale);
       updateAbilityBar(state.runCharges);
+      if (state.medalHud) updateMedalRunTrack(state.medalHud);
       dilationOverlay.classList.toggle('active', state.timeScale < 1);
       if (state.bossActive) {
         bossBar.classList.remove('hidden');
@@ -353,15 +498,28 @@ function buildCallbacks() {
       hud.finalWave.textContent = state.mode === 'stage'
         ? (state.stageName || `Section ${state.wave}`)
         : state.wave;
+      if (failLostLoot) {
+        const lost = state.lostUnconfirmed || {};
+        const n = (lost.cards?.length || 0) + (lost.parts?.length || 0);
+        if (n > 0) {
+          failLostLoot.textContent = `Unconfirmed loot lost: ${lost.cards?.length || 0} card(s), ${lost.parts?.length || 0} part(s)`;
+          failLostLoot.classList.remove('hidden');
+        } else failLostLoot.classList.add('hidden');
+      }
       overlayGameOver.classList.remove('hidden');
       abilityBar.classList.add('hidden');
+      if (medalRunTrack) medalRunTrack.classList.add('hidden');
     },
     onStageComplete(result) {
       const cfg = HANGAR_CONFIG;
       const starMult = cfg.difficulty.starMult[result.difficulty] || 1;
-      const medalBonus = result.medals.length * cfg.stagePayout.medalBonus;
+      let medalBonus = result.medals.length * cfg.stagePayout.medalBonus;
+      if (result.medals.includes('noHit')) {
+        medalBonus += CollectionSystem.aggregatePassiveEffects(SkyForceSave.load()).noHitStarBonus;
+      }
       const rescueBonus = (result.rescued || 0) * cfg.stagePayout.rescueBonus;
-      const toBank = Math.round(result.runStars * starMult) + medalBonus + rescueBonus;
+      const passives = CollectionSystem.aggregatePassiveEffects(SkyForceSave.load());
+      const toBank = Math.round(result.runStars * starMult * passives.starBankMult) + medalBonus + rescueBonus;
       const banked = SkyForceSave.bankRunStars(toBank);
       SkyForceSave.recordStageMedals(result.stageId, result.difficulty, result.medals);
       SkyForceSave.recordStageClear(result.stageId, result.score, result.difficulty);
@@ -371,8 +529,17 @@ function buildCallbacks() {
       if (hud.clearRunStars) hud.clearRunStars.textContent = `${toBank.toLocaleString()} (${result.runStars} base)`;
       if (hud.clearBankedStars) hud.clearBankedStars.textContent = banked.toLocaleString();
       renderClearMedals(result.medals);
+      if (clearNewLoot) {
+        const nc = result.newCards?.length || 0;
+        const np = result.newParts?.length || 0;
+        if (nc + np > 0) {
+          clearNewLoot.textContent = `Collection: +${nc} card(s), +${np} ship part(s) claimed!`;
+          clearNewLoot.classList.remove('hidden');
+        } else clearNewLoot.classList.add('hidden');
+      }
       overlayStageClear.classList.remove('hidden');
       abilityBar.classList.add('hidden');
+      if (medalRunTrack) medalRunTrack.classList.add('hidden');
       refreshMenu();
     },
   };
@@ -397,7 +564,12 @@ function startGame(mode = 'arcade', stageData = null, stageId = null, difficulty
   if (hud.waveLabel) hud.waveLabel.textContent = mode === 'stage' ? 'Section' : 'Wave';
 
   const save = SkyForceSave.load();
-  const hangarStats = HangarSystem.statsFromSave(save);
+  save.runUnconfirmed = { cards: [], parts: [] };
+  SkyForceSave.write(save);
+  const hangarStats = CollectionSystem.mergeHangarWithCollection(
+    HangarSystem.statsFromSave(save),
+    save,
+  );
 
   game = new Game(canvas, buildCallbacks(), {
     mode,
@@ -415,8 +587,11 @@ function startGame(mode = 'arcade', stageData = null, stageId = null, difficulty
 btnHangar.addEventListener('click', () => {
   hideAllOverlays();
   overlayHangar.classList.remove('hidden');
-  renderHangar();
+  showHangarTab('upgrades');
 });
+tabUpgrades?.addEventListener('click', () => showHangarTab('upgrades'));
+tabFleet?.addEventListener('click', () => showHangarTab('fleet'));
+tabAlbum?.addEventListener('click', () => showHangarTab('album'));
 
 btnStages.addEventListener('click', () => {
   hideAllOverlays();

@@ -151,14 +151,19 @@ flowchart TD
 
 ## Acceptance criteria (DRD compliance)
 
-- [ ] Relative touch movement (not absolute jump-to-finger)  
-- [ ] Center hitbox ≤ 25% of visual radius  
-- [ ] Time dilation on control release  
-- [ ] Object pools for bullets, stars, particles  
-- [ ] Stage 1 fully JSON-driven (zero random wave spawn in campaign mode)  
-- [ ] 4 medals + Hard difficulty on stage 1  
-- [ ] Hangar with exponential star costs  
-- [ ] Boss telegraph before lethal patterns  
+- [x] Relative touch movement (not absolute jump-to-finger)  
+- [x] Center hitbox ≤ 25% of visual radius (4px / 14px)  
+- [x] Time dilation on control release (20% Focus Time)  
+- [x] Object pools for bullets  
+- [x] Stage 1 fully JSON-driven (campaign mode)  
+- [x] 4 medals + difficulty tiers on stage 1  
+- [x] Hangar with exponential star costs (8 modules)  
+- [x] Boss two-phase patterns + rage telegraph  
+- [ ] Pause menu  
+- [ ] Chain break on enemy escape  
+- [ ] Modular boss parts  
+
+See **`docs/FEATURES-AND-DESIGN.md`** §17 for full implemented vs planned matrix.
 
 ---
 

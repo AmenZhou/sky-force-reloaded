@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-06-07
+
+- Collection album: 12 permanent cards, unconfirmed-until-clear high-stakes drops from elites/crates
+- Fleet hangar: 5 ships (Enforcer + 4 part-gated), equip before launch
+- Destructibles: cargo crates, radar towers, fuel tanks with star/power-up fountains
+- Mid-run medal HUD: live chips, slide banners on earn, Perfect cracks on first hit
+- Ship/card passives merge into hangar stats; Ace luck boosts drop rates
+
 ## 0.5.0 — 2026-06-07
 
 - Hangar: 8 upgrade categories (HP, cannon, wings, missiles, magnet, laser/shield/bomb stocks) with star costs
